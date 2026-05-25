@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class RoomData : MonoBehaviour
+public class EnemyChaser : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()

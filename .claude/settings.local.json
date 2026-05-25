@@ -4,7 +4,8 @@
       "Read(//c/Users/sihan/AppData/Roaming/Claude/**)",
       "Read(//c/Users/sihan/.claude/**)",
       "Bash(ls \"C:/Users/sihan/AppData/Roaming/Claude/\" 2>/dev/null && ls \"C:/Users/sihan/AppData/Local/Claude/\" 2>/dev/null && ls \"C:/Users/sihan/.claude/\" 2>/dev/null)",
-      "Read(//c/Users/sihan/AppData/Local/**)"
+      "Read(//c/Users/sihan/AppData/Local/**)",
+      "mcp__UnityMCP__create_script"
     ]
   }
 }
