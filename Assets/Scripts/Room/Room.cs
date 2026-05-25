@@ -1,16 +1,30 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class Room : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    [SerializeField] List<EnemyBase> enemies = new();
+    [SerializeField] GameObject[] doors;
+
+    bool isCleared;
+
     void Start()
     {
-        
+        EnemyManager.Instance?.RegisterRoom(this, enemies);
+        SetDoorsOpen(false);
     }
 
-    // Update is called once per frame
-    void Update()
+    public void OnRoomCleared()
     {
-        
+        if (isCleared) return;
+        isCleared = true;
+        SetDoorsOpen(true);
+        Debug.Log("Room Cleared!");
+    }
+
+    void SetDoorsOpen(bool open)
+    {
+        foreach (var door in doors)
+            if (door != null) door.SetActive(open);
     }
 }

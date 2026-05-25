@@ -1,16 +1,34 @@
 using UnityEngine;
 
-public class EnemyChaser : MonoBehaviour
+[RequireComponent(typeof(Rigidbody2D))]
+public class EnemyChaser : EnemyBase
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    [SerializeField] float moveSpeed = 1f;
+    [SerializeField] float detectionRange = 8f;
+
+    Rigidbody2D rb;
+    Transform player;
+
+    protected override void Awake()
     {
-        
+        base.Awake();
+        rb = GetComponent<Rigidbody2D>();
+        rb.gravityScale = 0f;
+        rb.constraints = RigidbodyConstraints2D.FreezeRotation;
     }
 
-    // Update is called once per frame
-    void Update()
+    void Start()
     {
-        
+        var playerObj = GameObject.FindWithTag("Player");
+        if (playerObj != null) player = playerObj.transform;
+    }
+
+    void FixedUpdate()
+    {
+        if (player == null) return;
+        if (Vector2.Distance(transform.position, player.position) > detectionRange) return;
+
+        Vector2 dir = ((Vector2)player.position - rb.position).normalized;
+        rb.MovePosition(rb.position + dir * moveSpeed * Time.fixedDeltaTime);
     }
 }

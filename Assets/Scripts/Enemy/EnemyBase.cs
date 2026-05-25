@@ -2,15 +2,35 @@ using UnityEngine;
 
 public class EnemyBase : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    [SerializeField] protected int maxHp = 3;
+    [SerializeField] Color bodyColor = new Color(0.45f, 0.45f, 0.45f, 1f);
+    protected int currentHp;
+
+    protected virtual void Awake()
     {
-        
+        currentHp = maxHp;
+        var rend = GetComponent<Renderer>();
+        if (rend != null)
+        {
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            mat.SetColor("_BaseColor", bodyColor);
+            rend.material = mat;
+        }
     }
 
-    // Update is called once per frame
-    void Update()
+    public void TakeDamage(int damage)
     {
-        
+        currentHp -= damage;
+        OnDamaged();
+        if (currentHp <= 0)
+            Die();
+    }
+
+    protected virtual void OnDamaged() { }
+
+    protected virtual void Die()
+    {
+        EnemyManager.Instance?.OnEnemyDied(this);
+        Destroy(gameObject);
     }
 }
