@@ -17,7 +17,7 @@ public class MapUI : MonoBehaviour
     [SerializeField, Min(0.01f)] float conditionLabelFontSize = 3f;
     [SerializeField, Min(0.01f)] float feedbackLabelFontSize  = 3f;
     [SerializeField] TMP_FontAsset mapTextFont;
-    [SerializeField] string roomSceneName = "SampleScene";
+    [SerializeField] string roomSceneName = "RoomScene";
     [SerializeField] string bossSceneName = "BossScene";
     [SerializeField, Min(0f)] float conditionFeedbackDelay = 0.6f;
 

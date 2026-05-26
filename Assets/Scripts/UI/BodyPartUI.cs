@@ -25,7 +25,7 @@ public class BodyPartUI : MonoBehaviour
         if (label != null) return;
 
         var canvasGO = new GameObject("BodyStatusCanvas");
-        canvasGO.hideFlags = HideFlags.DontSave; // 씬/프리팹에 저장되지 않도록
+        canvasGO.hideFlags = HideFlags.HideAndDontSave;
         canvasGO.transform.SetParent(transform);
 
         var canvas = canvasGO.AddComponent<Canvas>();
@@ -35,11 +35,12 @@ public class BodyPartUI : MonoBehaviour
         canvasGO.AddComponent<GraphicRaycaster>();
 
         var textGO = new GameObject("BodyStatusText");
+        textGO.hideFlags = HideFlags.HideAndDontSave;
         textGO.transform.SetParent(canvasGO.transform, false);
 
         label = textGO.AddComponent<TextMeshProUGUI>();
-        label.enableWordWrapping = false;
-        label.raycastTarget      = false;
+        label.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+        label.raycastTarget    = false;
 
         var rt = label.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f);
