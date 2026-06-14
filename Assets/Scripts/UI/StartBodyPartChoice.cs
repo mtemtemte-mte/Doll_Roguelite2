@@ -29,6 +29,7 @@ public class StartBodyPartChoice : MonoBehaviour, IPointerEnterHandler, IPointer
     bool isMoving;
     const float OutwardReactionDistance = 26f;
     const float InwardReactionDistance = 22f;
+    const float AttachSlimeTriggerT = 0.82f;
 
     public void Configure(
         StartBodyPartSelector owner,
@@ -49,7 +50,10 @@ public class StartBodyPartChoice : MonoBehaviour, IPointerEnterHandler, IPointer
             homePosition = rectTransform.anchoredPosition;
 
         if (graphic != null)
+        {
             normalColor = graphic.color;
+            normalColor.a = 1f;
+        }
 
         configured = true;
         selected = false;
@@ -60,7 +64,7 @@ public class StartBodyPartChoice : MonoBehaviour, IPointerEnterHandler, IPointer
         if (!configured || graphic == null || selected)
             return;
 
-        graphic.color = hoverColor;
+        graphic.color = VisibleColor(hoverColor);
     }
 
     public void OnPointerExit(PointerEventData eventData)
@@ -68,7 +72,7 @@ public class StartBodyPartChoice : MonoBehaviour, IPointerEnterHandler, IPointer
         if (!configured || graphic == null || selected)
             return;
 
-        graphic.color = normalColor;
+        graphic.color = VisibleColor(normalColor);
     }
 
     public void OnPointerClick(PointerEventData eventData)
@@ -78,7 +82,7 @@ public class StartBodyPartChoice : MonoBehaviour, IPointerEnterHandler, IPointer
 
         selected = true;
         if (graphic != null)
-            graphic.color = normalColor;
+            graphic.color = VisibleColor(normalColor);
 
         MoveToSelected(() => owner.HandleChoiceComplete(this, action));
     }
@@ -92,7 +96,7 @@ public class StartBodyPartChoice : MonoBehaviour, IPointerEnterHandler, IPointer
     {
         selected = false;
         if (graphic != null)
-            graphic.color = normalColor;
+            graphic.color = VisibleColor(normalColor);
 
         if (moveRoutine != null)
         {
@@ -120,7 +124,7 @@ public class StartBodyPartChoice : MonoBehaviour, IPointerEnterHandler, IPointer
 
         selected = true;
         if (graphic != null)
-            graphic.color = normalColor;
+            graphic.color = VisibleColor(normalColor);
 
         MoveToSelected(onComplete);
     }
@@ -148,7 +152,11 @@ public class StartBodyPartChoice : MonoBehaviour, IPointerEnterHandler, IPointer
         float attachDuration = moveDuration * 0.68f;
 
         yield return MoveSegment(rectTransform.anchoredPosition, reactionPosition, reactionDuration);
-        yield return MoveSegment(rectTransform.anchoredPosition, selectedPosition, attachDuration);
+        yield return MoveSegment(rectTransform.anchoredPosition, selectedPosition, attachDuration, () =>
+        {
+            if (owner != null)
+                owner.PlayBodyPartSlimeSound();
+        }, AttachSlimeTriggerT);
 
         rectTransform.anchoredPosition = selectedPosition;
         moveRoutine = null;
@@ -169,6 +177,9 @@ public class StartBodyPartChoice : MonoBehaviour, IPointerEnterHandler, IPointer
 
     IEnumerator ReturnRoutine(System.Action onComplete)
     {
+        if (owner != null)
+            owner.PlayBodyPartSlimeSound();
+
         Vector2 inwardDirection = (selectedPosition - homePosition).sqrMagnitude > 0.01f
             ? (selectedPosition - homePosition).normalized
             : Vector2.zero;
@@ -185,11 +196,13 @@ public class StartBodyPartChoice : MonoBehaviour, IPointerEnterHandler, IPointer
         onComplete?.Invoke();
     }
 
-    IEnumerator MoveSegment(Vector2 start, Vector2 destination, float duration)
+    IEnumerator MoveSegment(Vector2 start, Vector2 destination, float duration, System.Action trigger = null, float triggerT = 1f)
     {
         isMoving = true;
         float elapsed = 0f;
         duration = Mathf.Max(0.01f, duration);
+        bool triggered = trigger == null;
+        triggerT = Mathf.Clamp01(triggerT);
 
         while (elapsed < duration)
         {
@@ -197,12 +210,30 @@ public class StartBodyPartChoice : MonoBehaviour, IPointerEnterHandler, IPointer
             float t = Mathf.Clamp01(elapsed / duration);
             t = t * t * (3f - 2f * t);
             rectTransform.anchoredPosition = Vector2.LerpUnclamped(start, destination, t);
+
+            if (!triggered && t >= triggerT)
+            {
+                triggered = true;
+                trigger?.Invoke();
+            }
+
             if (t >= 1f)
                 break;
 
             yield return null;
         }
 
+        if (!triggered)
+            trigger?.Invoke();
+
         rectTransform.anchoredPosition = destination;
+    }
+
+    Color VisibleColor(Color color)
+    {
+        if (color.a <= 0.01f)
+            color.a = 1f;
+
+        return color;
     }
 }
