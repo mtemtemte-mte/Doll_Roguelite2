@@ -161,16 +161,10 @@ public class StartIntroSequence : MonoBehaviour
             backgroundImage.transform.SetSiblingIndex(Mathf.Min(2, transform.childCount - 1));
 
         if (bodyPartImages != null)
-        {
-            for (int i = 0; i < bodyPartImages.Length; i++)
-            {
-                if (bodyPartImages[i] != null)
-                    bodyPartImages[i].transform.SetAsLastSibling();
-            }
-        }
+            BringBodyPartsToFront();
 
         if (finalTitleImage != null)
-            finalTitleImage.transform.SetAsLastSibling();
+            finalTitleImage.transform.SetSiblingIndex(Mathf.Min(3, transform.childCount - 1));
     }
 
     IEnumerator RunIntroSequence()
@@ -213,6 +207,7 @@ public class StartIntroSequence : MonoBehaviour
 
         finalTitleImage.gameObject.SetActive(true);
         finalTitleImage.transform.SetAsLastSibling();
+        BringBodyPartsToFront();
         SetImageAlpha(finalTitleImage, 1f);
         titleRect.anchoredPosition = start;
 
@@ -220,6 +215,19 @@ public class StartIntroSequence : MonoBehaviour
         yield return MoveRect(titleRect, start, overshoot, duration * 0.38f);
         yield return MoveRect(titleRect, overshoot, finalTitlePosition, duration * 0.62f);
         titleRect.anchoredPosition = finalTitlePosition;
+        BringBodyPartsToFront();
+    }
+
+    void BringBodyPartsToFront()
+    {
+        if (bodyPartImages == null)
+            return;
+
+        for (int i = 0; i < bodyPartImages.Length; i++)
+        {
+            if (bodyPartImages[i] != null)
+                bodyPartImages[i].transform.SetAsLastSibling();
+        }
     }
 
     IEnumerator FadeBodyParts(float from, float to, float duration)
