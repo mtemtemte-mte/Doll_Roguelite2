@@ -37,18 +37,37 @@ public class StartBodyPartSelector : MonoBehaviour
     [SerializeField] Vector2 roadPanelSize = new Vector2(900f, 562.5f);
     [SerializeField] Vector2 roadClosePosition = new Vector2(354f, 142f);
     [SerializeField] Vector2 roadCloseSize = new Vector2(180f, 180f);
+    [SerializeField] Vector2 roadPageHotspotPosition = new Vector2(0f, -278f);
+    [SerializeField] Vector2 roadPageHotspotSize = new Vector2(130f, 92f);
     [SerializeField] Vector2 roadButtonBasePosition = Vector2.zero;
     [SerializeField] float roadButtonFloatAmplitude = 6f;
     [SerializeField] float roadButtonFloatSpeed = 2.2f;
     [SerializeField, Range(0f, 1f)] float roadButtonAlphaHitThreshold = 0.1f;
+    [Header("Audio Settings")]
+    [SerializeField] AudioSource bgmSource;
+    [SerializeField] AudioSource optionCellClickSfxSource;
+    [SerializeField] AudioSource roadPageClickSfxSource;
+    [SerializeField] AudioSource roadEmptySlotClickSfxSource;
+    [SerializeField, Range(0, 10)] int defaultBgmVolumeSteps = 7;
+    [SerializeField, Range(0, 10)] int defaultSfxVolumeSteps = 7;
+    [Header("Panel Controls")]
+    [SerializeField] Color panelAccentColor = new Color(0.34f, 0.19f, 0.09f, 1f);
+    [SerializeField] Color panelEmptyCellColor = new Color(0.78f, 0.62f, 0.42f, 1f);
+    [SerializeField] Color hiddenHoverColor = new Color(0.42f, 0.25f, 0.12f, 0.20f);
+    [SerializeField] Vector2 volumeCellSize = new Vector2(36f, 36f);
+    [SerializeField] Vector2 volumeCellSpacing = new Vector2(42f, 0f);
+    [SerializeField] Vector2 bgmVolumeBarStartPosition = new Vector2(-154f, 61f);
+    [SerializeField] Vector2 sfxVolumeBarStartPosition = new Vector2(-154f, -51f);
     StartBodyPartChoice leftHandChoice;
     StartBodyPartChoice leftLegChoice;
     StartBodyPartChoice rightHandChoice;
     StartBodyPartChoice rightLegChoice;
     Button optionCloseButton;
     Button roadCloseButton;
+    Button roadPageButton;
     Image roadButtonImage;
     RectTransform roadButtonRect;
+    RectTransform roadPageHotspotRect;
     GameObject roadPanel;
     GameObject quitPanel;
     SpriteRenderer exitQuestionRenderer;
@@ -78,12 +97,22 @@ public class StartBodyPartSelector : MonoBehaviour
     Coroutine roadButtonFloatRoutine;
     Coroutine startSequenceRoutine;
     Coroutine delayedChoicePanelRoutine;
+    Coroutine roadEmptySlotMessageRoutine;
+    Image[] bgmVolumeCellFills;
+    Image[] sfxVolumeCellFills;
+    TextMeshProUGUI roadEmptySlotMessage;
     bool isEyeAnimationPlaying;
     bool optionPanelClosing;
     bool roadPanelClosing;
+    int bgmVolumeSteps;
+    int sfxVolumeSteps;
+    int roadPageIndex;
     float lastPanelOpenSoundTime = -1f;
     const float PanelOpenSoundRepeatGuard = 0.2f;
     const float HiddenButtonAlpha = 0.001f;
+    const int VolumeCellCount = 10;
+    const string BgmVolumePrefsKey = "StartScene.BgmVolumeSteps";
+    const string SfxVolumePrefsKey = "StartScene.SfxVolumeSteps";
 
     void Awake()
     {
@@ -104,6 +133,9 @@ public class StartBodyPartSelector : MonoBehaviour
                 exitPanel = exit.gameObject;
         }
 
+        AutoWireAudioReferences();
+        LoadVolumeSettings();
+
         leftHandChoice = ConfigureChoice("lefthand", new Vector2(-163f, -88f), StartBodyPartChoice.ClickAction.LoadScene);
         leftLegChoice = ConfigureChoice("leftleg", new Vector2(-92f, -311f), StartBodyPartChoice.ClickAction.ShowOptionPanel);
         rightLegChoice = ConfigureChoice("rightleg", new Vector2(64f, -317f), StartBodyPartChoice.ClickAction.ShowQuitPanel);
@@ -114,6 +146,7 @@ public class StartBodyPartSelector : MonoBehaviour
             hotspot.gameObject.SetActive(false);
 
         EnsureOptionPanelVisuals();
+        EnsureOptionVolumeControls();
         EnsureOptionCloseButton();
         EnsureRoadPanel();
         DisablePanelChildAudioSources();
@@ -132,6 +165,7 @@ public class StartBodyPartSelector : MonoBehaviour
 
         AutoWireStartBackdropImages();
         PrepareEyeAnimationImage();
+        ApplyAudioVolumes();
     }
 
     void Update()
@@ -142,6 +176,231 @@ public class StartBodyPartSelector : MonoBehaviour
             return;
 
         HandleExitPanelPointer();
+    }
+
+    void AutoWireAudioReferences()
+    {
+        if (bgmSource == null)
+        {
+            GameObject bgmObject = GameObject.Find("bgm");
+            if (bgmObject != null)
+                bgmSource = bgmObject.GetComponent<AudioSource>();
+        }
+
+        if (optionCellClickSfxSource == null && optionPanel != null)
+            optionCellClickSfxSource = FindChildAudioSource(optionPanel.transform, "sfx1");
+
+        if (roadPageClickSfxSource == null)
+        {
+            Transform road = transform.Find("RoadPanel");
+            if (road != null)
+                roadPageClickSfxSource = FindChildAudioSource(road, "sfx2");
+        }
+
+        if (roadEmptySlotClickSfxSource == null)
+            roadEmptySlotClickSfxSource = roadPageClickSfxSource;
+
+        ConfigureOptionalAudioSource(optionCellClickSfxSource);
+        ConfigureOptionalAudioSource(roadPageClickSfxSource);
+        ConfigureOptionalAudioSource(roadEmptySlotClickSfxSource);
+    }
+
+    AudioSource FindChildAudioSource(Transform parent, string childName)
+    {
+        if (parent == null)
+            return null;
+
+        Transform child = parent.Find(childName);
+        return child != null ? child.GetComponent<AudioSource>() : null;
+    }
+
+    void ConfigureOptionalAudioSource(AudioSource source)
+    {
+        if (source == null)
+            return;
+
+        source.playOnAwake = false;
+        source.enabled = true;
+    }
+
+    void LoadVolumeSettings()
+    {
+        bgmVolumeSteps = Mathf.Clamp(PlayerPrefs.GetInt(BgmVolumePrefsKey, defaultBgmVolumeSteps), 0, VolumeCellCount);
+        sfxVolumeSteps = Mathf.Clamp(PlayerPrefs.GetInt(SfxVolumePrefsKey, defaultSfxVolumeSteps), 0, VolumeCellCount);
+    }
+
+    void EnsureOptionVolumeControls()
+    {
+        if (optionPanel == null)
+            return;
+
+        Transform label = optionPanel.transform.Find("OptionLabel");
+        Transform parent = label != null ? label : optionPanel.transform;
+
+        bgmVolumeCellFills = EnsureVolumeRow(parent, "BgmVolumeCell", bgmVolumeBarStartPosition, true);
+        sfxVolumeCellFills = EnsureVolumeRow(parent, "SfxVolumeCell", sfxVolumeBarStartPosition, false);
+        RefreshVolumeCells();
+    }
+
+    Image[] EnsureVolumeRow(Transform parent, string prefix, Vector2 startPosition, bool isBgm)
+    {
+        Image[] fills = new Image[VolumeCellCount];
+        for (int i = 0; i < VolumeCellCount; i++)
+        {
+            int steps = i + 1;
+            Vector2 position = startPosition + volumeCellSpacing * i;
+            fills[i] = EnsureVolumeCell(parent, prefix + steps, position, isBgm, steps);
+        }
+
+        return fills;
+    }
+
+    Image EnsureVolumeCell(Transform parent, string cellName, Vector2 position, bool isBgm, int steps)
+    {
+        Transform existing = parent.Find(cellName);
+        bool created = existing == null;
+        GameObject cellObject = existing != null ? existing.gameObject : new GameObject(cellName);
+        cellObject.transform.SetParent(parent, false);
+        cellObject.SetActive(true);
+
+        RectTransform rect = cellObject.GetComponent<RectTransform>();
+        if (rect == null)
+        {
+            rect = cellObject.AddComponent<RectTransform>();
+            created = true;
+        }
+
+        if (created)
+        {
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+        }
+
+        if (created)
+        {
+            rect.anchoredPosition = position;
+            rect.sizeDelta = volumeCellSize;
+        }
+
+        Image border = cellObject.GetComponent<Image>();
+        if (border == null)
+            border = cellObject.AddComponent<Image>();
+
+        border.color = panelAccentColor;
+        border.raycastTarget = true;
+
+        Button button = cellObject.GetComponent<Button>();
+        if (button == null)
+            button = cellObject.AddComponent<Button>();
+
+        button.transition = Selectable.Transition.None;
+        button.targetGraphic = border;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(() => HandleVolumeCellClicked(isBgm, steps));
+
+        Image fill = EnsureCellFill(cellObject.transform);
+        cellObject.transform.SetAsLastSibling();
+        return fill;
+    }
+
+    Image EnsureCellFill(Transform parent)
+    {
+        Transform existing = parent.Find("Fill");
+        bool created = existing == null;
+        GameObject fillObject = existing != null ? existing.gameObject : new GameObject("Fill");
+        fillObject.transform.SetParent(parent, false);
+        fillObject.SetActive(true);
+
+        RectTransform rect = fillObject.GetComponent<RectTransform>();
+        if (rect == null)
+        {
+            rect = fillObject.AddComponent<RectTransform>();
+            created = true;
+        }
+
+        if (created)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+        }
+
+        if (created)
+        {
+            rect.offsetMin = new Vector2(4f, 4f);
+            rect.offsetMax = new Vector2(-4f, -4f);
+        }
+
+        Image fill = fillObject.GetComponent<Image>();
+        if (fill == null)
+            fill = fillObject.AddComponent<Image>();
+
+        fill.raycastTarget = false;
+        return fill;
+    }
+
+    void HandleVolumeCellClicked(bool isBgm, int steps)
+    {
+        int current = isBgm ? bgmVolumeSteps : sfxVolumeSteps;
+        int next = current == steps ? Mathf.Max(0, steps - 1) : steps;
+
+        if (isBgm)
+            bgmVolumeSteps = next;
+        else
+            sfxVolumeSteps = next;
+
+        PlayerPrefs.SetInt(isBgm ? BgmVolumePrefsKey : SfxVolumePrefsKey, next);
+        PlayerPrefs.Save();
+
+        RefreshVolumeCells();
+        ApplyAudioVolumes();
+        PlayPanelAssignedSound(optionCellClickSfxSource);
+    }
+
+    void RefreshVolumeCells()
+    {
+        RefreshVolumeRow(bgmVolumeCellFills, bgmVolumeSteps);
+        RefreshVolumeRow(sfxVolumeCellFills, sfxVolumeSteps);
+    }
+
+    void RefreshVolumeRow(Image[] fills, int activeCount)
+    {
+        if (fills == null)
+            return;
+
+        for (int i = 0; i < fills.Length; i++)
+        {
+            if (fills[i] == null)
+                continue;
+
+            fills[i].color = i < activeCount ? panelAccentColor : panelEmptyCellColor;
+        }
+    }
+
+    void ApplyAudioVolumes()
+    {
+        if (bgmSource == null)
+        {
+            GameObject bgmObject = GameObject.Find("bgm");
+            if (bgmObject != null)
+                bgmSource = bgmObject.GetComponent<AudioSource>();
+        }
+
+        if (bgmSource != null)
+            bgmSource.volume = GetBgmVolume01();
+
+        SoundManager.SetMasterSfxVolume(GetSfxVolume01());
+    }
+
+    float GetBgmVolume01()
+    {
+        return Mathf.Clamp01(bgmVolumeSteps / (float)VolumeCellCount);
+    }
+
+    float GetSfxVolume01()
+    {
+        return Mathf.Clamp01(sfxVolumeSteps / (float)VolumeCellCount);
     }
 
     StartBodyPartChoice ConfigureChoice(string childName, Vector2 selectedPosition, StartBodyPartChoice.ClickAction action)
@@ -600,6 +859,8 @@ public class StartBodyPartSelector : MonoBehaviour
 
         if (quitPanel != null)
             quitPanel.SetActive(false);
+
+        HideRoadEmptySlotMessage();
     }
 
     void ShowOptionPanel()
@@ -746,11 +1007,36 @@ public class StartBodyPartSelector : MonoBehaviour
 
     void DisablePanelChildAudioSources()
     {
-        SoundManager.DisableAudioSourcesInChildren(optionPanel);
+        DisableUnassignedPanelAudioSources(optionPanel);
 
         Transform road = transform.Find("RoadPanel");
         if (road != null)
-            SoundManager.DisableAudioSourcesInChildren(road.gameObject);
+            DisableUnassignedPanelAudioSources(road.gameObject);
+    }
+
+    void DisableUnassignedPanelAudioSources(GameObject root)
+    {
+        if (root == null)
+            return;
+
+        AudioSource[] sources = root.GetComponentsInChildren<AudioSource>(true);
+        for (int i = 0; i < sources.Length; i++)
+        {
+            if (IsAssignedPanelAudioSource(sources[i]))
+                continue;
+
+            sources[i].Stop();
+            sources[i].playOnAwake = false;
+            sources[i].enabled = false;
+        }
+    }
+
+    bool IsAssignedPanelAudioSource(AudioSource source)
+    {
+        return source != null &&
+            (source == optionCellClickSfxSource ||
+             source == roadPageClickSfxSource ||
+             source == roadEmptySlotClickSfxSource);
     }
 
     void EnsureRoadPanel()
@@ -791,11 +1077,13 @@ public class StartBodyPartSelector : MonoBehaviour
 
         ConfigureRoadText(overlayImage != null ? overlayImage.transform : roadPanel.transform);
         EnsureRoadSaveSlotHotspots();
+        EnsureRoadEmptySlotMessage();
 
+        bool roadCloseCreated = roadPanel.transform.Find("RoadCloseHotspot") == null;
         roadCloseButton = EnsureButton(roadPanel.transform, "RoadCloseHotspot", roadClosePosition, roadCloseSize, new Color(1f, 1f, 1f, HiddenButtonAlpha));
         roadCloseButton.gameObject.SetActive(true);
         RectTransform roadCloseRect = roadCloseButton.GetComponent<RectTransform>();
-        if (roadCloseRect != null)
+        if (roadCloseCreated && roadCloseRect != null)
         {
             roadCloseRect.anchorMin = new Vector2(0.5f, 0.5f);
             roadCloseRect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -871,14 +1159,31 @@ public class StartBodyPartSelector : MonoBehaviour
 
         Button button = image.GetComponent<Button>();
         if (button == null)
-        {
             button = image.gameObject.AddComponent<Button>();
-            button.transition = Selectable.Transition.ColorTint;
-            ApplyButtonTint(button, Color.white, new Color(1.18f, 1.18f, 1.18f, 1f));
-        }
 
         button.interactable = false;
         button.enabled = false;
+
+        bool pageHotspotCreated = roadPanel.transform.Find("RoadPageHotspot") == null;
+        roadPageButton = EnsureButton(roadPanel.transform, "RoadPageHotspot", roadPageHotspotPosition, roadPageHotspotSize, new Color(1f, 1f, 1f, HiddenButtonAlpha));
+        roadPageButton.transition = Selectable.Transition.ColorTint;
+        roadPageButton.targetGraphic = image;
+        ApplyRoadButtonTint(roadPageButton);
+        roadPageButton.interactable = true;
+        roadPageButton.onClick.RemoveAllListeners();
+        roadPageButton.onClick.AddListener(HandleRoadPageButtonClicked);
+        roadPageHotspotRect = roadPageButton.GetComponent<RectTransform>();
+        if (pageHotspotCreated && roadPageHotspotRect != null)
+        {
+            roadPageHotspotRect.anchorMin = new Vector2(0.5f, 0.5f);
+            roadPageHotspotRect.anchorMax = new Vector2(0.5f, 0.5f);
+            roadPageHotspotRect.pivot = new Vector2(0.5f, 0.5f);
+            roadPageHotspotRect.anchoredPosition = roadPageHotspotPosition;
+            roadPageHotspotRect.sizeDelta = roadPageHotspotSize;
+        }
+
+        roadPageButton.transform.SetAsLastSibling();
+        RefreshRoadPageButton();
     }
 
     void ConfigureRoadText(Transform parent)
@@ -914,17 +1219,155 @@ public class StartBodyPartSelector : MonoBehaviour
         float[] rowY = { 37f, -17f, -71f, -125f };
         for (int i = 0; i < rowY.Length; i++)
         {
-            EnsureRoadSlotButton("RoadSaveSlot" + (i + 1) + "Left", new Vector2(-285f, rowY[i]), new Vector2(169f, 52f));
-            EnsureRoadSlotButton("RoadSaveSlot" + (i + 1) + "Right", new Vector2(87f, rowY[i]), new Vector2(574f, 52f));
+            EnsureRoadSlotButton("RoadSaveSlot" + (i + 1) + "Left", i, new Vector2(-285f, rowY[i]), new Vector2(169f, 52f));
+            EnsureRoadSlotButton("RoadSaveSlot" + (i + 1) + "Right", i, new Vector2(87f, rowY[i]), new Vector2(574f, 52f));
         }
     }
 
-    void EnsureRoadSlotButton(string buttonName, Vector2 position, Vector2 size)
+    void EnsureRoadSlotButton(string buttonName, int visibleSlotIndex, Vector2 position, Vector2 size)
     {
         Button slot = EnsureButton(roadPanel.transform, buttonName, position, size, new Color(1f, 1f, 1f, HiddenButtonAlpha));
-        slot.transition = Selectable.Transition.None;
+        slot.transition = Selectable.Transition.ColorTint;
+        ApplyHiddenButtonHoverTint(slot);
         slot.onClick.RemoveAllListeners();
+        slot.onClick.AddListener(() => HandleRoadSlotClicked(visibleSlotIndex, slot.GetComponent<RectTransform>()));
         slot.transform.SetAsLastSibling();
+    }
+
+    void EnsureRoadEmptySlotMessage()
+    {
+        if (roadPanel == null)
+            return;
+
+        Transform existing = roadPanel.transform.Find("RoadEmptySlotMessage");
+        GameObject messageObject = existing != null ? existing.gameObject : new GameObject("RoadEmptySlotMessage");
+        messageObject.transform.SetParent(roadPanel.transform, false);
+        messageObject.SetActive(true);
+
+        roadEmptySlotMessage = messageObject.GetComponent<TextMeshProUGUI>();
+        if (roadEmptySlotMessage == null)
+            roadEmptySlotMessage = messageObject.AddComponent<TextMeshProUGUI>();
+
+        roadEmptySlotMessage.font = UIThinDungFont.Get();
+        roadEmptySlotMessage.text = "그 칸에 저장된 파일이 없습니다!";
+        roadEmptySlotMessage.fontSize = 30f;
+        roadEmptySlotMessage.alignment = TextAlignmentOptions.Center;
+        roadEmptySlotMessage.color = new Color(panelAccentColor.r, panelAccentColor.g, panelAccentColor.b, 0f);
+        roadEmptySlotMessage.raycastTarget = false;
+
+        RectTransform rect = roadEmptySlotMessage.rectTransform;
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = new Vector2(0f, -190f);
+        rect.sizeDelta = new Vector2(620f, 44f);
+    }
+
+    void HandleRoadSlotClicked(int visibleSlotIndex, RectTransform slotRect)
+    {
+        int absoluteSlotIndex = roadPageIndex * 4 + visibleSlotIndex + 1;
+        PlayPanelAssignedSound(roadEmptySlotClickSfxSource);
+
+        if (!HasSavedFile(absoluteSlotIndex))
+            ShowRoadEmptySlotMessage(slotRect);
+    }
+
+    bool HasSavedFile(int slotIndex)
+    {
+        return PlayerPrefs.HasKey("SaveSlot" + slotIndex);
+    }
+
+    void ShowRoadEmptySlotMessage(RectTransform slotRect)
+    {
+        if (roadEmptySlotMessage == null)
+            return;
+
+        if (roadEmptySlotMessageRoutine != null)
+            StopCoroutine(roadEmptySlotMessageRoutine);
+
+        RectTransform messageRect = roadEmptySlotMessage.rectTransform;
+        if (slotRect != null)
+            messageRect.anchoredPosition = new Vector2(0f, slotRect.anchoredPosition.y);
+
+        roadEmptySlotMessage.transform.SetAsLastSibling();
+        roadEmptySlotMessageRoutine = StartCoroutine(FadeRoadEmptySlotMessageRoutine());
+    }
+
+    System.Collections.IEnumerator FadeRoadEmptySlotMessageRoutine()
+    {
+        if (roadEmptySlotMessage == null)
+            yield break;
+
+        yield return FadeTMPText(roadEmptySlotMessage, 0f, 1f, 0.08f);
+        yield return new WaitForSecondsRealtime(0.48f);
+        yield return FadeTMPText(roadEmptySlotMessage, 1f, 0f, 0.32f);
+        roadEmptySlotMessageRoutine = null;
+    }
+
+    System.Collections.IEnumerator FadeTMPText(TMP_Text text, float from, float to, float duration)
+    {
+        if (text == null)
+            yield break;
+
+        float elapsed = 0f;
+        duration = Mathf.Max(0.01f, duration);
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float alpha = Mathf.Lerp(from, to, Mathf.Clamp01(elapsed / duration));
+            SetTMPAlpha(text, alpha);
+            yield return null;
+        }
+
+        SetTMPAlpha(text, to);
+    }
+
+    void HandleRoadPageButtonClicked()
+    {
+        PlayPanelAssignedSound(roadPageClickSfxSource);
+        roadPageIndex = roadPageIndex == 0 ? 1 : 0;
+        RefreshRoadPageButton();
+    }
+
+    void RefreshRoadPageButton()
+    {
+        if (roadButtonRect != null)
+            roadButtonRect.localRotation = Quaternion.Euler(0f, 0f, roadPageIndex == 0 ? 0f : 180f);
+
+        SetRoadButtonFloatOffset(0f);
+    }
+
+    Vector2 GetRoadButtonImageBasePosition()
+    {
+        if (roadPageIndex == 0)
+            return roadButtonBasePosition;
+
+        return roadButtonBasePosition + roadPageHotspotPosition * 2f;
+    }
+
+    void SetRoadButtonFloatOffset(float offset)
+    {
+        Vector2 offsetVector = Vector2.up * offset;
+
+        if (roadButtonRect != null)
+            roadButtonRect.anchoredPosition = GetRoadButtonImageBasePosition() + offsetVector;
+
+        if (roadPageHotspotRect != null)
+            roadPageHotspotRect.anchoredPosition = roadPageHotspotPosition + offsetVector;
+    }
+
+    void PlayPanelAssignedSound(AudioSource source)
+    {
+        ConfigureOptionalAudioSource(source);
+
+        if (source != null && source.clip != null)
+        {
+            source.PlayOneShot(source.clip, GetSfxVolume01());
+            return;
+        }
+
+        SoundManager.PlayClick();
     }
 
     void CacheRoadPanelPositions()
@@ -1069,6 +1512,7 @@ public class StartBodyPartSelector : MonoBehaviour
             image.color = color;
         }
 
+        image.color = color;
         image.raycastTarget = true;
 
         Button button = buttonObject.GetComponent<Button>();
@@ -1078,6 +1522,7 @@ public class StartBodyPartSelector : MonoBehaviour
             button.transition = Selectable.Transition.ColorTint;
         }
 
+        button.targetGraphic = image;
         return button;
     }
 
@@ -1094,6 +1539,23 @@ public class StartBodyPartSelector : MonoBehaviour
         button.colors = colors;
     }
 
+    void ApplyRoadButtonTint(Button button)
+    {
+        if (button == null)
+            return;
+
+        button.transition = Selectable.Transition.ColorTint;
+        ColorBlock colors = button.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(1.55f, 1.45f, 1.22f, 1f);
+        colors.selectedColor = colors.highlightedColor;
+        colors.pressedColor = new Color(1.25f, 1.08f, 0.84f, 1f);
+        colors.disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.5f);
+        colors.colorMultiplier = 1f;
+        colors.fadeDuration = 0.06f;
+        button.colors = colors;
+    }
+
     void ApplyHiddenButtonHoverTint(Button button)
     {
         if (button == null)
@@ -1102,9 +1564,9 @@ public class StartBodyPartSelector : MonoBehaviour
         button.transition = Selectable.Transition.ColorTint;
         ColorBlock colors = button.colors;
         colors.normalColor = new Color(0f, 0f, 0f, 0f);
-        colors.highlightedColor = new Color(0f, 0f, 0f, 0.18f);
+        colors.highlightedColor = hiddenHoverColor;
         colors.selectedColor = colors.highlightedColor;
-        colors.pressedColor = new Color(0f, 0f, 0f, 0.28f);
+        colors.pressedColor = new Color(hiddenHoverColor.r, hiddenHoverColor.g, hiddenHoverColor.b, Mathf.Min(0.38f, hiddenHoverColor.a + 0.12f));
         colors.disabledColor = new Color(0f, 0f, 0f, 0f);
         colors.colorMultiplier = 1f;
         colors.fadeDuration = 0.06f;
@@ -1360,6 +1822,9 @@ public class StartBodyPartSelector : MonoBehaviour
         roadPanel.SetActive(true);
         roadPanel.transform.SetAsLastSibling();
         roadPanelRect.anchoredPosition = roadPanelHiddenPosition;
+        roadPageIndex = 0;
+        RefreshRoadPageButton();
+        HideRoadEmptySlotMessage();
 
         if (roadCloseButton != null)
             roadCloseButton.gameObject.SetActive(true);
@@ -1393,6 +1858,7 @@ public class StartBodyPartSelector : MonoBehaviour
             StopCoroutine(roadPanelRoutine);
 
         StopRoadButtonFloat();
+        HideRoadEmptySlotMessage();
         PlayInventoryPanelCloseSound();
         roadPanelRoutine = StartCoroutine(SlideRoadPanel(
             roadPanelRect.anchoredPosition,
@@ -1478,7 +1944,7 @@ public class StartBodyPartSelector : MonoBehaviour
 
         if (roadButtonRect != null)
         {
-            roadButtonRect.anchoredPosition = roadButtonBasePosition;
+            SetRoadButtonFloatOffset(0f);
             roadButtonFloatRoutine = StartCoroutine(RoadButtonFloatRoutine());
         }
     }
@@ -1491,8 +1957,19 @@ public class StartBodyPartSelector : MonoBehaviour
             roadButtonFloatRoutine = null;
         }
 
-        if (roadButtonRect != null)
-            roadButtonRect.anchoredPosition = roadButtonBasePosition;
+        SetRoadButtonFloatOffset(0f);
+    }
+
+    void HideRoadEmptySlotMessage()
+    {
+        if (roadEmptySlotMessageRoutine != null)
+        {
+            StopCoroutine(roadEmptySlotMessageRoutine);
+            roadEmptySlotMessageRoutine = null;
+        }
+
+        if (roadEmptySlotMessage != null)
+            SetTMPAlpha(roadEmptySlotMessage, 0f);
     }
 
     System.Collections.IEnumerator RoadButtonFloatRoutine()
@@ -1500,7 +1977,7 @@ public class StartBodyPartSelector : MonoBehaviour
         while (roadPanel != null && roadPanel.activeInHierarchy)
         {
             float offset = Mathf.Sin(Time.unscaledTime * roadButtonFloatSpeed) * roadButtonFloatAmplitude;
-            roadButtonRect.anchoredPosition = roadButtonBasePosition + Vector2.up * offset;
+            SetRoadButtonFloatOffset(offset);
             yield return null;
         }
 
