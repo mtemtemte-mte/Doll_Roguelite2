@@ -131,16 +131,6 @@ public class SoundManager : MonoBehaviour
         EnsureInstance().PlayInternal(clip, repeatGuard, volumeScale);
     }
 
-    public static void SetMasterSfxVolume(float volume)
-    {
-        EnsureInstance().masterSfxVolume = Mathf.Clamp(volume, 0f, 2f);
-    }
-
-    public static float GetMasterSfxVolume()
-    {
-        return EnsureInstance().masterSfxVolume;
-    }
-
     public static AudioClip LoadClipResource(string resourcePath, string fallbackResourcePath = null)
     {
         AudioClip clip = LoadClip(resourcePath);
