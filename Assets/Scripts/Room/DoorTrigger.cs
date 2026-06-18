@@ -9,6 +9,8 @@ public class DoorTrigger : MonoBehaviour
     [SerializeField] string bossSceneName = "BossScene";
     [SerializeField] string supplySceneName = "PresentScene";
     [SerializeField] string eventSceneName = "EventScene";
+    [SerializeField] string treasureSceneName = "TreasureRoomScene";
+    [SerializeField] string shopSceneName = "ShopScene";
     [SerializeField] Color lockedColor = new Color(0.25f, 0.25f, 0.25f, 1f);
     [SerializeField] Color openColor = new Color(0.85f, 0.62f, 0.25f, 1f);
     [SerializeField] Color blockedColor = new Color(0.65f, 0.15f, 0.15f, 1f);
@@ -275,6 +277,8 @@ public class DoorTrigger : MonoBehaviour
         switch (node.roomType)
         {
             case RoomType.Boss: return bossSceneName;
+            case RoomType.Treasure: return treasureSceneName;
+            case RoomType.Shop: return shopSceneName;
             case RoomType.Supply: return supplySceneName;
             case RoomType.Event: return eventSceneName;
             default: return roomSceneName;
@@ -286,6 +290,8 @@ public class DoorTrigger : MonoBehaviour
         switch (node.roomType)
         {
             case RoomType.Boss: return "\uBCF4\uC2A4 \uBC29";
+            case RoomType.Treasure: return "\uBCF4\uBB3C \uBC29";
+            case RoomType.Shop: return "\uC0C1\uC810";
             case RoomType.Supply: return "\uBCF4\uAE09 \uBC29";
             case RoomType.Event: return "\uC774\uBCA4\uD2B8 \uBC29";
             case RoomType.ConditionCombat: return "\uC870\uAC74 \uC804\uD22C";
@@ -306,6 +312,8 @@ public class DoorTrigger : MonoBehaviour
         switch (node.roomType)
         {
             case RoomType.Boss: return "E: \uBCF4\uC2A4 \uBC29";
+            case RoomType.Treasure: return "E: \uBCF4\uBB3C \uBC29";
+            case RoomType.Shop: return "E: \uC0C1\uC810";
             case RoomType.Supply: return "E: \uBCF4\uAE09 \uBC29";
             case RoomType.Event: return "E: \uC774\uBCA4\uD2B8 \uBC29";
             case RoomType.ConditionCombat: return "E: \uC870\uAC74 \uC804\uD22C";

@@ -34,6 +34,7 @@ public class EnemyBase : MonoBehaviour
     {
         currentHp = maxHp;
         spriteRenderer = GetComponent<SpriteRenderer>();
+        EnsureCharacterShadow();
         if (spriteRenderer != null)
         {
             animationFrames = LoadRandomEnemyFrames();
@@ -53,6 +54,12 @@ public class EnemyBase : MonoBehaviour
         }
 
         EnsureHitCollider();
+    }
+
+    protected void EnsureCharacterShadow()
+    {
+        if (GetComponent<CharacterOvalShadow>() == null && GetComponent<SpriteRenderer>() != null)
+            gameObject.AddComponent<CharacterOvalShadow>();
     }
 
     protected virtual void Start()
@@ -307,11 +314,22 @@ public class EnemyBase : MonoBehaviour
     {
         SoundManager.PlayEnemyHit();
 
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
+
         if (spriteRenderer == null || !gameObject.activeInHierarchy)
             return;
 
         if (hitFeedbackRoutine != null)
+        {
             StopCoroutine(hitFeedbackRoutine);
+            spriteRenderer.color = spriteBaseColor;
+        }
+
+        spriteBaseColor = spriteRenderer.color;
 
         hitFeedbackRoutine = StartCoroutine(HitFeedbackRoutine());
     }

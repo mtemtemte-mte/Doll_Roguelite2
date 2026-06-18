@@ -23,6 +23,8 @@ public class MapUI : MonoBehaviour
     [SerializeField, Min(0f)] float conditionFeedbackDelay = 0.6f;
     [SerializeField] string supplySceneName = "PresentScene";
     [SerializeField] string eventSceneName  = "EventScene";
+    [SerializeField] string treasureSceneName = "TreasureRoomScene";
+    [SerializeField] string shopSceneName = "ShopScene";
 
     // 노드 색상
     static readonly Color ColCurrent    = new Color(1.00f, 0.65f, 0.10f, 1f);
@@ -35,6 +37,8 @@ public class MapUI : MonoBehaviour
     static readonly Color ColBoss       = new Color(0.90f, 0.75f, 0.10f, 1f); // 금
     static readonly Color ColSupply     = new Color(0.20f, 0.85f, 0.90f, 1f); // 하늘
     static readonly Color ColEvent      = new Color(0.90f, 0.45f, 0.80f, 1f); // 분홍
+    static readonly Color ColTreasure   = new Color(1.00f, 0.78f, 0.16f, 1f); // 보물
+    static readonly Color ColShop       = new Color(0.42f, 0.72f, 0.92f, 1f); // 상점
     static readonly Color ColRouteOnly  = new Color(0.45f, 0.45f, 0.45f, 1f);
     static readonly Color ColHidden     = new Color(0.22f, 0.22f, 0.22f, 1f); // 짙은 회색
     static readonly Color ColLine       = new Color(0.40f, 0.40f, 0.40f, 1f);
@@ -63,6 +67,8 @@ public class MapUI : MonoBehaviour
             case RoomType.NormalCombat: return "COMBAT\nFREE";
             case RoomType.Supply:       return "SUPPLY";
             case RoomType.Event:        return "EVENT";
+            case RoomType.Treasure:     return "TREASURE";
+            case RoomType.Shop:         return "SHOP";
             case RoomType.Boss:         return "BOSS";
             case RoomType.ConditionCombat:
                 string cond;
@@ -307,6 +313,8 @@ public class MapUI : MonoBehaviour
         if (MapManager.Instance != null && MapManager.Instance.TryBeginRoom(node))
         {
             string scene = node.roomType == RoomType.Boss   ? bossSceneName
+                         : node.roomType == RoomType.Treasure ? treasureSceneName
+                         : node.roomType == RoomType.Shop ? shopSceneName
                          : node.roomType == RoomType.Supply  ? supplySceneName
                          : node.roomType == RoomType.Event   ? eventSceneName
                          : roomSceneName;
@@ -403,6 +411,8 @@ public class MapUI : MonoBehaviour
                 case RoomType.NormalCombat: return ColFree;
                 case RoomType.Supply:       return ColSupply;
                 case RoomType.Event:        return ColEvent;
+                case RoomType.Treasure:     return ColTreasure;
+                case RoomType.Shop:         return ColShop;
                 case RoomType.Boss:         return ColBoss;
                 case RoomType.ConditionCombat:
                     switch (n.conditionType)

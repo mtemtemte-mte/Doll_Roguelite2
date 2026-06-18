@@ -99,6 +99,27 @@ public class PlayerDamageReceiver : MonoBehaviour
         SoundManager.PlayPlayerHit();
     }
 
+    public bool TryTakePatternDamage(int damage, float cooldownOverride = -1f)
+    {
+        if (Time.time < nextDamageTime)
+            return false;
+
+        int finalDamage = Mathf.Max(1, damage);
+        float cooldown = cooldownOverride >= 0f ? cooldownOverride : damageCooldown;
+        nextDamageTime = Time.time + Mathf.Max(0.01f, cooldown);
+        DamageNextBodyTarget(finalDamage);
+        PlayHitFeedback();
+        SoundManager.PlayPlayerHit();
+        return true;
+    }
+
+    public void LockMovement(float duration)
+    {
+        PlayerController controller = GetComponent<PlayerController>();
+        if (controller != null)
+            controller.LockMovement(duration);
+    }
+
     void DamageNextBodyTarget(int damage)
     {
         InventoryManager inventory = InventoryManager.Instance;

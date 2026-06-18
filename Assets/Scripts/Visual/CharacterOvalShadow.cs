@@ -8,7 +8,7 @@ using UnityEditor;
 [DisallowMultipleComponent]
 public class CharacterOvalShadow : MonoBehaviour
 {
-    const string ShadowName = "Player Direction Shadow";
+    const string ShadowName = "Character Direction Shadow";
     const string LegacyShadowName = "Oval Shadow";
 
     [SerializeField] Vector2 footAnchorOffset = new Vector2(0f, 0f);
@@ -23,8 +23,6 @@ public class CharacterOvalShadow : MonoBehaviour
 
     void Awake()
     {
-        if (Application.isPlaying)
-            Configure();
     }
 
     void OnEnable()
@@ -55,7 +53,9 @@ public class CharacterOvalShadow : MonoBehaviour
         }
 #endif
 
-        Configure();
+        // In play mode this can be called while Unity is still inside another
+        // component's Awake/OnEnable. Runtime configuration is handled in LateUpdate
+        // so child renderers are not created during that restricted window.
     }
 
 #if UNITY_EDITOR
@@ -71,7 +71,7 @@ public class CharacterOvalShadow : MonoBehaviour
         ownerRenderer = GetComponent<SpriteRenderer>();
         playerController = GetComponent<PlayerController>();
 
-        if (!IsPlayerShadowTarget())
+        if (!IsShadowTarget())
         {
             HideShadow();
             return;
@@ -95,9 +95,9 @@ public class CharacterOvalShadow : MonoBehaviour
         shadowTransform.localPosition = CalculateFootLockedShadowPosition(sourceSprite, shadowTransform.localRotation);
     }
 
-    bool IsPlayerShadowTarget()
+    bool IsShadowTarget()
     {
-        return ownerRenderer != null && CompareTag("Player");
+        return ownerRenderer != null && (CompareTag("Player") || GetComponent<EnemyBase>() != null);
     }
 
     SpriteRenderer EnsureShadowRenderer()
@@ -105,6 +105,10 @@ public class CharacterOvalShadow : MonoBehaviour
         Transform legacy = transform.Find(LegacyShadowName);
         if (legacy != null)
             legacy.gameObject.SetActive(false);
+
+        Transform previousPlayerShadow = transform.Find("Player Direction Shadow");
+        if (previousPlayerShadow != null && previousPlayerShadow.name != ShadowName)
+            previousPlayerShadow.gameObject.SetActive(false);
 
         Transform existing = transform.Find(ShadowName);
         if (existing == null)

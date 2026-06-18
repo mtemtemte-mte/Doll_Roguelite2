@@ -56,6 +56,14 @@ public class EnemyManager : MonoBehaviour
             onRoomCleared?.Invoke();
     }
 
+    public void RegisterSpawnedEnemy(EnemyBase enemy)
+    {
+        if (enemy == null || activeEnemies.Contains(enemy))
+            return;
+
+        activeEnemies.Add(enemy);
+    }
+
     public void OnEnemyDied(EnemyBase enemy)
     {
         if (!activeEnemies.Remove(enemy))

@@ -109,6 +109,45 @@ public class InventoryManager : MonoBehaviour
         return true;
     }
 
+    public bool TryAddPart(BodyPart part, bool equipIfEmpty = true)
+    {
+        if (part == null)
+            return false;
+
+        int equippedIndex = (int)part.slot;
+        if (equipIfEmpty && equippedIndex >= 0 && equippedIndex < equipped.Length && equipped[equippedIndex] == null)
+        {
+            equipped[equippedIndex] = part;
+            SyncBodyState();
+            OnInventoryChanged?.Invoke();
+            return true;
+        }
+
+        int free = FreeStorageIndex();
+        if (free < 0)
+            return false;
+
+        storage[free] = part;
+        SyncBodyState();
+        OnInventoryChanged?.Invoke();
+        return true;
+    }
+
+    public int RepairAllParts()
+    {
+        int repaired = 0;
+        repaired += RepairParts(equipped);
+        repaired += RepairParts(storage);
+
+        if (repaired > 0)
+        {
+            SyncBodyState();
+            OnInventoryChanged?.Invoke();
+        }
+
+        return repaired;
+    }
+
     public void SyncBodyState()
     {
         var s = BodyManager.Instance?.State;
@@ -201,5 +240,27 @@ public class InventoryManager : MonoBehaviour
         for (int i = 0; i < storage.Length; i++)
             if (storage[i] == null) return i;
         return -1;
+    }
+
+    int RepairParts(BodyPart[] parts)
+    {
+        if (parts == null)
+            return 0;
+
+        int repaired = 0;
+        for (int i = 0; i < parts.Length; i++)
+        {
+            BodyPart part = parts[i];
+            if (part == null)
+                continue;
+
+            part.maxHp = Mathf.Max(1, part.maxHp);
+            if (part.currentHp < part.maxHp)
+                repaired++;
+
+            part.currentHp = part.maxHp;
+        }
+
+        return repaired;
     }
 }

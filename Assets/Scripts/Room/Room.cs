@@ -15,12 +15,17 @@ public class Room : MonoBehaviour
     [SerializeField] Vector2 spawnRange = new Vector2(4f, 3f);
     [SerializeField] bool randomizeEnemyPositions = true;
     [SerializeField] int spawnPositionAttempts = 30;
+    [SerializeField, Min(0f)] float minSpawnDistanceFromPlayer = 4.2f;
+    [SerializeField, Min(1)] int firstRoomButtonWeight = 5;
+    [SerializeField, Min(0)] int firstRoomGuaranteedButtonMin = 1;
+    [SerializeField, Min(0)] int firstRoomGuaranteedButtonMax = 2;
 
     [SerializeField] GameObject[] doors;
     [SerializeField] Vector2 doorLine = new Vector2(8f, 4f);
 
     readonly List<EnemyBase> enemies = new List<EnemyBase>();
     readonly List<DoorTrigger> activeDoors = new List<DoorTrigger>();
+    readonly List<GameObject> sceneEnemyTemplates = new List<GameObject>();
     GameObject sceneEnemyTemplate;
     bool waveCleared;
     bool isCleared;
@@ -87,7 +92,7 @@ public class Room : MonoBehaviour
                     Random.Range(cameraRect.yMin, cameraRect.yMax),
                     0f);
 
-                if (!hasPlayerExclusion || !playerExclusionRect.Contains(position))
+                if (IsValidSpawnPosition(position, hasPlayerExclusion, playerExclusionRect))
                     return position;
             }
 
@@ -103,13 +108,28 @@ public class Room : MonoBehaviour
                 Random.Range(-spawnRange.y, spawnRange.y),
                 0f);
 
-            if (!hasPlayerExclusion || !playerExclusionRect.Contains(position))
+            if (IsValidSpawnPosition(position, hasPlayerExclusion, playerExclusionRect))
                 return position;
         }
 
         return hasPlayerExclusion
-            ? new Vector3(playerExclusionRect.xMax, playerExclusionRect.center.y, 0f)
+            ? PushSpawnBesidePlayer(Rect.MinMaxRect(-spawnRange.x, -spawnRange.y, spawnRange.x, spawnRange.y), playerExclusionRect)
             : Vector3.zero;
+    }
+
+    bool IsValidSpawnPosition(Vector3 position, bool hasPlayerExclusion, Rect playerExclusionRect)
+    {
+        if (hasPlayerExclusion && playerExclusionRect.Contains(position))
+            return false;
+
+        if (minSpawnDistanceFromPlayer <= 0f)
+            return true;
+
+        GameObject player = GameObject.FindWithTag("Player");
+        if (player == null)
+            return true;
+
+        return Vector2.Distance(position, player.transform.position) >= minSpawnDistanceFromPlayer;
     }
 
     bool TryGetPlayerExclusionRect(Vector2 enemySize, out Rect rect)
@@ -176,6 +196,10 @@ public class Room : MonoBehaviour
 
     Vector3 PushSpawnBesidePlayer(Rect spawnRect, Rect playerExclusionRect)
     {
+        GameObject player = GameObject.FindWithTag("Player");
+        if (player != null && minSpawnDistanceFromPlayer > 0f)
+            return FarthestSpawnPoint(spawnRect, player.transform.position);
+
         bool hasLeft = playerExclusionRect.xMin > spawnRect.xMin;
         bool hasRight = playerExclusionRect.xMax < spawnRect.xMax;
         bool useLeft = hasLeft && (!hasRight || playerExclusionRect.center.x - spawnRect.xMin > spawnRect.xMax - playerExclusionRect.center.x);
@@ -190,6 +214,31 @@ public class Room : MonoBehaviour
 
         float y = Mathf.Clamp(playerExclusionRect.center.y, spawnRect.yMin, spawnRect.yMax);
         return new Vector3(x, y, 0f);
+    }
+
+    Vector3 FarthestSpawnPoint(Rect spawnRect, Vector3 playerPosition)
+    {
+        Vector3[] candidates =
+        {
+            new Vector3(spawnRect.xMin, spawnRect.yMin, 0f),
+            new Vector3(spawnRect.xMin, spawnRect.yMax, 0f),
+            new Vector3(spawnRect.xMax, spawnRect.yMin, 0f),
+            new Vector3(spawnRect.xMax, spawnRect.yMax, 0f)
+        };
+
+        Vector3 best = candidates[0];
+        float bestDistance = Vector2.Distance(best, playerPosition);
+        for (int i = 1; i < candidates.Length; i++)
+        {
+            float distance = Vector2.Distance(candidates[i], playerPosition);
+            if (distance > bestDistance)
+            {
+                best = candidates[i];
+                bestDistance = distance;
+            }
+        }
+
+        return best;
     }
 
     bool TryGetCameraSpawnRect(Vector2 enemySize, out Rect rect)
@@ -227,22 +276,75 @@ public class Room : MonoBehaviour
         if (enemyPrefab != null)
             return;
 
+        sceneEnemyTemplates.Clear();
         EnemyBase[] existingEnemies = GetComponentsInChildren<EnemyBase>(true);
         for (int i = 0; i < existingEnemies.Length; i++)
         {
-            if (sceneEnemyTemplate == null)
-                sceneEnemyTemplate = existingEnemies[i].gameObject;
+            GameObject template = existingEnemies[i].gameObject;
+            if (template.GetComponentInParent<Room>() != this)
+                continue;
 
-            existingEnemies[i].gameObject.SetActive(false);
+            if (!sceneEnemyTemplates.Contains(template))
+                sceneEnemyTemplates.Add(template);
+
+            if (sceneEnemyTemplate == null)
+                sceneEnemyTemplate = template;
+
+            template.SetActive(false);
         }
     }
 
     GameObject EnemyTemplate()
     {
+        return EnemyTemplate(1);
+    }
+
+    GameObject EnemyTemplate(int wave)
+    {
         if (enemyPrefab != null)
             return enemyPrefab.gameObject;
 
+        if (sceneEnemyTemplates.Count > 0)
+            return SelectSceneEnemyTemplate(wave);
+
         return sceneEnemyTemplate;
+    }
+
+    GameObject SelectSceneEnemyTemplate(int wave)
+    {
+        if (sceneEnemyTemplates.Count == 0)
+            return null;
+
+        int extraButtonWeight = IsFirstCombatRoom() ? Mathf.Max(1, firstRoomButtonWeight) - 1 : 0;
+        int totalWeight = sceneEnemyTemplates.Count;
+        for (int i = 0; i < sceneEnemyTemplates.Count; i++)
+            if (extraButtonWeight > 0 && IsButtonTemplate(sceneEnemyTemplates[i]))
+                totalWeight += extraButtonWeight;
+
+        int roll = Random.Range(0, Mathf.Max(1, totalWeight));
+        for (int i = 0; i < sceneEnemyTemplates.Count; i++)
+        {
+            int weight = 1;
+            if (extraButtonWeight > 0 && IsButtonTemplate(sceneEnemyTemplates[i]))
+                weight += extraButtonWeight;
+
+            if (roll < weight)
+                return sceneEnemyTemplates[i];
+
+            roll -= weight;
+        }
+
+        return sceneEnemyTemplates[Random.Range(0, sceneEnemyTemplates.Count)];
+    }
+
+    bool IsFirstCombatRoom()
+    {
+        return MapRunState.PendingNode != null && MapRunState.PendingNode.layer == 1;
+    }
+
+    bool IsButtonTemplate(GameObject template)
+    {
+        return template != null && template.GetComponent<EnemyChaser>() != null;
     }
 
     IEnumerator SpawnWave(int wave)
@@ -252,17 +354,22 @@ public class Room : MonoBehaviour
         int minCount = Mathf.Max(1, minEnemies);
         int maxCount = Mathf.Max(minCount, maxEnemies);
         int count = Random.Range(minCount, maxCount + 1);
-        GameObject template = EnemyTemplate();
+        List<GameObject> templates = BuildWaveTemplates(wave, count);
+        GameObject markerTemplate = templates.Count > 0 ? templates[0] : EnemyTemplate(wave);
 
-        Vector2 markerSize = GetEnemyMarkerSize(template);
+        Vector2 markerSize = GetEnemyMarkerSize(markerTemplate);
         List<Vector3> positions = new List<Vector3>(count);
         for (int i = 0; i < count; i++)
-            positions.Add(randomizeEnemyPositions ? RandomPos(markerSize) : template.transform.position);
+            positions.Add(randomizeEnemyPositions ? RandomPos(markerSize) : markerTemplate.transform.position);
 
         yield return StartCoroutine(BlinkSpawnPositions(positions, markerSize));
 
         for (int i = 0; i < positions.Count; i++)
         {
+            GameObject template = i < templates.Count ? templates[i] : EnemyTemplate(wave);
+            if (template == null)
+                continue;
+
             GameObject enemyGO = Instantiate(template, positions[i], Quaternion.identity, transform);
             enemyGO.name = template.name + "_Wave" + wave + "_" + (i + 1);
             enemyGO.SetActive(true);
@@ -273,6 +380,80 @@ public class Room : MonoBehaviour
                 EnemyManager.Instance?.ConfigureEnemy(enemy, true);
                 enemies.Add(enemy);
             }
+        }
+    }
+
+    List<GameObject> BuildWaveTemplates(int wave, int count)
+    {
+        List<GameObject> templates = new List<GameObject>(count);
+        int guaranteedButtons = GuaranteedButtonCountForWave(count);
+        for (int i = 0; i < guaranteedButtons; i++)
+        {
+            GameObject buttonTemplate = RandomButtonTemplate();
+            if (buttonTemplate != null)
+                templates.Add(buttonTemplate);
+        }
+
+        while (templates.Count < count)
+            templates.Add(EnemyTemplate(wave));
+
+        Shuffle(templates);
+        return templates;
+    }
+
+    int GuaranteedButtonCountForWave(int count)
+    {
+        if (!IsFirstCombatRoom() || enemyPrefab != null)
+            return 0;
+
+        int buttonTemplateCount = ButtonTemplateCount();
+        if (buttonTemplateCount == 0)
+            return 0;
+
+        int min = Mathf.Clamp(firstRoomGuaranteedButtonMin, 0, count);
+        int max = Mathf.Clamp(Mathf.Max(min, firstRoomGuaranteedButtonMax), min, count);
+        return Random.Range(min, max + 1);
+    }
+
+    int ButtonTemplateCount()
+    {
+        int total = 0;
+        for (int i = 0; i < sceneEnemyTemplates.Count; i++)
+            if (IsButtonTemplate(sceneEnemyTemplates[i]))
+                total++;
+
+        return total;
+    }
+
+    GameObject RandomButtonTemplate()
+    {
+        int count = ButtonTemplateCount();
+        if (count == 0)
+            return null;
+
+        int target = Random.Range(0, count);
+        for (int i = 0; i < sceneEnemyTemplates.Count; i++)
+        {
+            if (!IsButtonTemplate(sceneEnemyTemplates[i]))
+                continue;
+
+            if (target == 0)
+                return sceneEnemyTemplates[i];
+
+            target--;
+        }
+
+        return null;
+    }
+
+    void Shuffle(List<GameObject> templates)
+    {
+        for (int i = 0; i < templates.Count; i++)
+        {
+            int swapIndex = Random.Range(i, templates.Count);
+            GameObject temp = templates[i];
+            templates[i] = templates[swapIndex];
+            templates[swapIndex] = temp;
         }
     }
 

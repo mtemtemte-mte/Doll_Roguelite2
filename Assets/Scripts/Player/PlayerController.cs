@@ -43,6 +43,7 @@ public class PlayerController : MonoBehaviour
     Rigidbody2D rb;
     Vector2 moveInput;
     bool forwardWalkPressed;
+    float movementLockedUntil;
     FacingDirection facingDirection = FacingDirection.Down;
     FacingDirection lastWalkDirection = FacingDirection.Down;
     float facingLockTimer;
@@ -135,6 +136,14 @@ public class PlayerController : MonoBehaviour
         var kb = Keyboard.current;
         if (kb == null) return;
 
+        if (Time.time < movementLockedUntil)
+        {
+            moveInput = Vector2.zero;
+            forwardWalkPressed = false;
+            ApplyFacingSprite();
+            return;
+        }
+
         float h = 0f, v = 0f;
         bool leftPressed = kb.aKey.isPressed;
         bool rightPressed = kb.dKey.isPressed;
@@ -170,6 +179,12 @@ public class PlayerController : MonoBehaviour
     public void FaceDirection(Vector2 direction)
     {
         FaceDirection(direction, 0f);
+    }
+
+    public void LockMovement(float duration)
+    {
+        movementLockedUntil = Mathf.Max(movementLockedUntil, Time.time + Mathf.Max(0f, duration));
+        moveInput = Vector2.zero;
     }
 
     public void FaceDirection(Vector2 direction, float lockDuration)

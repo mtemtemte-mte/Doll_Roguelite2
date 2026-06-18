@@ -38,11 +38,11 @@ public static class MapGenerator
         a1.parent = a2.parent = a3.parent = start;
         start.children.Add(a1); start.children.Add(a2); start.children.Add(a3);
 
-        // Layer 2: Normal 1 + Cond 3 + Supply 1
+        // Layer 2: Normal 1 + Cond 3 + Treasure 1
         var l2 = BuildLayer(2, new[] {
             RoomType.NormalCombat,
             RoomType.ConditionCombat, RoomType.ConditionCombat, RoomType.ConditionCombat,
-            RoomType.Supply });
+            RoomType.Treasure });
         var b1 = l2[0]; var b2 = l2[1]; var b3 = l2[2]; var b4 = l2[3]; var b5 = l2[4];
 
         // A1→{B1,B2}  A2→{B2,B3,B4}  A3→{B4,B5}
@@ -51,11 +51,11 @@ public static class MapGenerator
         a2.children.Add(b2); a2.children.Add(b3); a2.children.Add(b4);
         a3.children.Add(b4); a3.children.Add(b5);
 
-        // Layer 3: Normal 1 + Cond 2 + Supply 1 + Event 1
+        // Layer 3: Normal 1 + Cond 2 + Treasure 1 + Shop 1
         var l3 = BuildLayer(3, new[] {
             RoomType.NormalCombat,
             RoomType.ConditionCombat, RoomType.ConditionCombat,
-            RoomType.Supply, RoomType.Event });
+            RoomType.Treasure, RoomType.Shop });
         var c1 = l3[0]; var c2 = l3[1]; var c3 = l3[2]; var c4 = l3[3]; var c5 = l3[4];
 
         // B1→{C1,C2}  B2→{C3}  B3→{C2,C4}  B4→{C3}  B5→{C4,C5}
@@ -67,8 +67,8 @@ public static class MapGenerator
         b4.children.Add(c3);
         b5.children.Add(c4); b5.children.Add(c5);
 
-        // Layer 4: Normal 1 + Cond 1 + Event 1
-        var l4 = BuildLayer(4, new[] { RoomType.NormalCombat, RoomType.ConditionCombat, RoomType.Event });
+        // Layer 4: Normal 1 + Cond 1 + Shop 1
+        var l4 = BuildLayer(4, new[] { RoomType.NormalCombat, RoomType.ConditionCombat, RoomType.Shop });
         var d1 = l4[0]; var d2 = l4[1]; var d3 = l4[2];
 
         // C1→{D1}  C2→{D1,D2}  C3→{D2}  C4→{D2,D3}  C5→{D3}

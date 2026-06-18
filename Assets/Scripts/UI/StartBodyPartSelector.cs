@@ -26,7 +26,10 @@ public class StartBodyPartSelector : MonoBehaviour
     [SerializeField] Image startBackgroundImage;
     [SerializeField] Image finalTitleImage;
     [SerializeField, Min(0f)] float startBackdropFadeDuration = 0.42f;
-    [SerializeField, Min(0f)] float startSequenceInitialDelay = 0.3f;
+    [SerializeField, Min(0f)] float startSequenceInitialDelay = 0f;
+    [SerializeField, Min(0f)] float startPartToOtherPartsDelay = 0.6f;
+    [SerializeField, Min(0f)] float allPartsToBackdropFadeDelay = 0.7f;
+    [SerializeField, Min(0f)] float backdropFadeToEyeDelay = 0.6f;
     [SerializeField] float autoAttachPause = 0.05f;
     [SerializeField] float panelShowDelayAfterAttach = 0.12f;
     [SerializeField] GameObject exitPanel;
@@ -596,10 +599,20 @@ public class StartBodyPartSelector : MonoBehaviour
             yield return new WaitForSecondsRealtime(startSequenceInitialDelay);
 
         yield return AttachChoiceRoutine(leftHandChoice);
-        yield return AttachChoiceRoutine(rightHandChoice);
-        yield return AttachChoiceRoutine(leftLegChoice);
-        yield return AttachChoiceRoutine(rightLegChoice);
+
+        if (startPartToOtherPartsDelay > 0f)
+            yield return new WaitForSecondsRealtime(startPartToOtherPartsDelay);
+
+        yield return AttachChoicesTogetherRoutine(rightHandChoice, leftLegChoice, rightLegChoice);
+
+        if (allPartsToBackdropFadeDelay > 0f)
+            yield return new WaitForSecondsRealtime(allPartsToBackdropFadeDelay);
+
         yield return FadeStartBackdropOutRoutine();
+
+        if (backdropFadeToEyeDelay > 0f)
+            yield return new WaitForSecondsRealtime(backdropFadeToEyeDelay);
+
         yield return PlayEyeOpeningRoutine();
 
         if (transition != null)
@@ -614,6 +627,29 @@ public class StartBodyPartSelector : MonoBehaviour
         bool done = false;
         choice.AttachToBody(() => done = true);
         while (!done)
+            yield return null;
+
+        if (autoAttachPause > 0f)
+            yield return new WaitForSecondsRealtime(autoAttachPause);
+    }
+
+    System.Collections.IEnumerator AttachChoicesTogetherRoutine(params StartBodyPartChoice[] choices)
+    {
+        if (choices == null || choices.Length == 0)
+            yield break;
+
+        int pending = 0;
+        for (int i = 0; i < choices.Length; i++)
+        {
+            StartBodyPartChoice choice = choices[i];
+            if (choice == null)
+                continue;
+
+            pending++;
+            choice.AttachToBody(() => pending--);
+        }
+
+        while (pending > 0)
             yield return null;
 
         if (autoAttachPause > 0f)
@@ -1218,8 +1254,10 @@ public class StartBodyPartSelector : MonoBehaviour
         for (int i = 0; i < rowTop.Length; i++)
         {
             float rowHeight = rowBottom[i] - rowTop[i];
-            EnsureRoadSlotButton("RoadSaveSlot" + (i + 1) + "Left", i, new Rect(36f, rowTop[i], 75f, rowHeight));
-            EnsureRoadSlotButton("RoadSaveSlot" + (i + 1) + "Right", i, new Rect(111f, rowTop[i], 255f, rowHeight));
+            string rowName = "RoadSaveSlot" + (i + 1);
+            RemoveChildIfExists(roadPanel.transform, rowName + "Left");
+            RemoveChildIfExists(roadPanel.transform, rowName + "Right");
+            EnsureRoadSlotButton(rowName, i, new Rect(36f, rowTop[i], 330f, rowHeight));
         }
     }
 
@@ -2073,57 +2111,5 @@ public class StartBodyPartSelector : MonoBehaviour
     {
         if (transition != null)
             transition.BeginQuit();
-    }
-}
-
-public class StartPanelHoverTint : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
-{
-    Image targetImage;
-    Color normalColor;
-    Color hoverColor;
-    Color pressedColor;
-    bool isPointerInside;
-
-    public void Configure(Image target, Color normal, Color hover, Color pressed)
-    {
-        targetImage = target;
-        normalColor = normal;
-        hoverColor = hover;
-        pressedColor = pressed;
-        Apply(normalColor);
-    }
-
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        isPointerInside = true;
-        Apply(hoverColor);
-    }
-
-    public void OnPointerExit(PointerEventData eventData)
-    {
-        isPointerInside = false;
-        Apply(normalColor);
-    }
-
-    public void OnPointerDown(PointerEventData eventData)
-    {
-        Apply(pressedColor);
-    }
-
-    public void OnPointerUp(PointerEventData eventData)
-    {
-        Apply(isPointerInside ? hoverColor : normalColor);
-    }
-
-    void OnDisable()
-    {
-        isPointerInside = false;
-        Apply(normalColor);
-    }
-
-    void Apply(Color color)
-    {
-        if (targetImage != null)
-            targetImage.color = color;
     }
 }

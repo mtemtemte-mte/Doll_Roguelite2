@@ -26,6 +26,25 @@ public class PlayerCameraFollow : MonoBehaviour
         SnapToTarget();
     }
 
+    public void ConfigureBounds(Vector2 size, Vector2 center, float cameraOrthographicSize, bool clamp)
+    {
+        backgroundSize = new Vector2(Mathf.Max(0.1f, size.x), Mathf.Max(0.1f, size.y));
+        backgroundCenter = center;
+        orthographicSize = Mathf.Max(0.1f, cameraOrthographicSize);
+        clampToBackground = clamp;
+
+        if (targetCamera == null)
+            targetCamera = GetComponent<Camera>();
+
+        if (targetCamera != null)
+        {
+            targetCamera.orthographic = true;
+            targetCamera.orthographicSize = orthographicSize;
+        }
+
+        SnapToTarget();
+    }
+
     void LateUpdate()
     {
         if (target == null)

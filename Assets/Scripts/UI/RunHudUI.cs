@@ -64,6 +64,8 @@ public class RunHudUI : MonoBehaviour
     static readonly Color ColBoss = new Color(0.90f, 0.75f, 0.10f, 1f);
     static readonly Color ColSupply = new Color(0.20f, 0.85f, 0.90f, 1f);
     static readonly Color ColEvent = new Color(0.90f, 0.45f, 0.80f, 1f);
+    static readonly Color ColTreasure = new Color(1.00f, 0.78f, 0.16f, 1f);
+    static readonly Color ColShop = new Color(0.42f, 0.72f, 0.92f, 1f);
     static readonly Color ColRouteOnly = new Color(0.45f, 0.45f, 0.45f, 1f);
     static readonly Color ColHidden = new Color(0.22f, 0.22f, 0.22f, 1f);
 
@@ -1234,6 +1236,8 @@ public class RunHudUI : MonoBehaviour
             case RoomType.NormalCombat: return "COMBAT";
             case RoomType.Supply: return "SUPPLY";
             case RoomType.Event: return "EVENT";
+            case RoomType.Treasure: return "TREASURE";
+            case RoomType.Shop: return "SHOP";
             case RoomType.Boss: return "BOSS";
             case RoomType.ConditionCombat: return ConditionLabel(node.conditionType);
             default: return "";
@@ -1267,6 +1271,8 @@ public class RunHudUI : MonoBehaviour
                 case RoomType.NormalCombat: return ColFree;
                 case RoomType.Supply: return ColSupply;
                 case RoomType.Event: return ColEvent;
+                case RoomType.Treasure: return ColTreasure;
+                case RoomType.Shop: return ColShop;
                 case RoomType.Boss: return ColBoss;
                 case RoomType.ConditionCombat:
                     switch (node.conditionType)
