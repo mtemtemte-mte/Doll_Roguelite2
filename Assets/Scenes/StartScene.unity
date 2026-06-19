@@ -547,7 +547,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 137372744}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 742923686}
+  m_Script: {fileID: 11500000, guid: 584b1c1132fc113439626c44dba256ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartPanelHoverTint
 --- !u!114 &137372750
@@ -559,7 +559,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 137372744}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 669352171}
+  m_Script: {fileID: 11500000, guid: 584b1c1132fc113439626c44dba256ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartPanelHoverTint
 --- !u!1 &140835977
@@ -762,7 +762,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 210828994}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 669352171}
+  m_Script: {fileID: 11500000, guid: 584b1c1132fc113439626c44dba256ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartPanelHoverTint
 --- !u!114 &210828997
@@ -1865,7 +1865,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 473125935}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 742923686}
+  m_Script: {fileID: 11500000, guid: 584b1c1132fc113439626c44dba256ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartPanelHoverTint
 --- !u!114 &473125941
@@ -1877,7 +1877,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 473125935}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 669352171}
+  m_Script: {fileID: 11500000, guid: 584b1c1132fc113439626c44dba256ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartPanelHoverTint
 --- !u!1 &481357142
@@ -2954,7 +2954,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 631230690}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 742923686}
+  m_Script: {fileID: 11500000, guid: 584b1c1132fc113439626c44dba256ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartPanelHoverTint
 --- !u!114 &631230696
@@ -2966,7 +2966,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 631230690}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 669352171}
+  m_Script: {fileID: 11500000, guid: 584b1c1132fc113439626c44dba256ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartPanelHoverTint
 --- !u!1 &653459487
@@ -8085,7 +8085,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StartSceneTransition
   startButton: {fileID: 2106910697}
   fadeImage: {fileID: 425252346}
-  targetSceneName: RoomScene
+  targetSceneName: TutorialScene
   fadeDuration: 0.35
 --- !u!1 &1610489772
 GameObject:
@@ -9961,7 +9961,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StartSceneTransition
   startButton: {fileID: 2106910697}
   fadeImage: {fileID: 425252346}
-  targetSceneName: RoomScene
+  targetSceneName: TutorialScene
   fadeDuration: 0.35
 --- !u!1 &2020169992
 GameObject:
@@ -11291,7 +11291,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StartBodyPartSelector
   transition: {fileID: 0}
   optionPanel: {fileID: 517964014}
-  targetSceneName: RoomScene
+  targetSceneName: TutorialScene
   moveDuration: 0.3
   hoverColor: {r: 0.72, g: 0.72, b: 0.72, a: 1}
   bodyPartAlphaHitThreshold: 0.1

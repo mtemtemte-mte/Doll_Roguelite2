@@ -131,6 +131,16 @@ public class SoundManager : MonoBehaviour
         manager.PlayManaged(manager.GetPanelClip(), manager.panelVolume, repeatGuard);
     }
 
+    public static void PlayTutorialPaperOpen(float repeatGuard = DefaultRepeatGuard)
+    {
+        PlayPanel(repeatGuard);
+    }
+
+    public static void PlayTutorialPaperClose(float repeatGuard = DefaultRepeatGuard)
+    {
+        PlayPanel(repeatGuard);
+    }
+
     public static void PlaySlime(float repeatGuard = DefaultRepeatGuard)
     {
         SoundManager manager = EnsureInstance();

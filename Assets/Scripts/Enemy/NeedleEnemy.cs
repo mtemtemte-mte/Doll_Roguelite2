@@ -92,12 +92,12 @@ public class NeedleEnemy : EnemyBase
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         Vector2 size = new Vector2(dashDistance, dashWidth);
         Vector2 center = start + direction * (dashDistance * 0.5f);
-        GameObject telegraph = EnemyTelegraph.CreateBox("NeedleDashTelegraph", center, size, angle, dashTelegraphColor, 72);
+        GameObject telegraph = TrackTelegraph(EnemyTelegraph.CreateBox("NeedleDashTelegraph", center, size, angle, dashTelegraphColor, 72));
 
         yield return EnemyTelegraph.Blink(telegraph, 2, warningDuration * 0.25f);
 
         if (telegraph != null)
-            Destroy(telegraph);
+            DestroyOwnedTelegraph(telegraph);
 
         Vector2 end = start + direction * dashDistance;
         float duration = dashDistance / Mathf.Max(0.01f, dashSpeed);

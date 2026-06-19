@@ -17,6 +17,7 @@ public class RunHudUI : MonoBehaviour
     [SerializeField] Sprite roundedButtonSprite;
     [SerializeField] Sprite roundedPipSprite;
     [SerializeField] Sprite circleSprite;
+    [SerializeField] Sprite hpPipSprite;
 
     Canvas canvas;
     RectTransform rootRect;
@@ -77,7 +78,7 @@ public class RunHudUI : MonoBehaviour
 
     void Awake()
     {
-        NormalizeRootCanvas();
+        EnsureRootCanvasComponents(false);
 
         if (Application.isPlaying)
         {
@@ -117,7 +118,7 @@ public class RunHudUI : MonoBehaviour
 
     public void Rebuild()
     {
-        NormalizeRootCanvas();
+        EnsureRootCanvasComponents(true);
 
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
@@ -172,15 +173,22 @@ public class RunHudUI : MonoBehaviour
         UpdateHudState();
     }
 
-    void NormalizeRootCanvas()
+    void EnsureRootCanvasComponents(bool forceGeneratedLayout)
     {
         gameObject.SetActive(true);
-        transform.localScale = Vector3.one;
         EnsureUIAssets();
 
         RectTransform rect = transform as RectTransform;
-        if (rect != null)
+        bool addedRect = false;
+        if (rect == null)
         {
+            rect = gameObject.AddComponent<RectTransform>();
+            addedRect = true;
+        }
+
+        if (forceGeneratedLayout || addedRect)
+        {
+            transform.localScale = Vector3.one;
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.pivot = new Vector2(0.5f, 0.5f);
@@ -191,13 +199,22 @@ public class RunHudUI : MonoBehaviour
         }
 
         Canvas rootCanvas = GetComponent<Canvas>();
-        if (rootCanvas != null)
+        bool addedCanvas = false;
+        if (rootCanvas == null)
         {
-            rootCanvas.enabled = true;
+            rootCanvas = gameObject.AddComponent<Canvas>();
+            addedCanvas = true;
+        }
+
+        if (forceGeneratedLayout || addedCanvas)
+        {
             rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
             rootCanvas.overrideSorting = true;
             rootCanvas.sortingOrder = 80;
         }
+
+        if (GetComponent<GraphicRaycaster>() == null)
+            gameObject.AddComponent<GraphicRaycaster>();
     }
 
     void EnsureUIAssets()
@@ -213,6 +230,8 @@ public class RunHudUI : MonoBehaviour
             roundedPipSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/UI/Sprites/ui_round_pip_6.png");
         if (circleSprite == null)
             circleSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/UI/Sprites/ui_circle.png");
+        if (hpPipSprite == null)
+            hpPipSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/room/hp.png");
 #endif
     }
 
@@ -318,10 +337,6 @@ public class RunHudUI : MonoBehaviour
     {
         if (mapButton == null)
             return;
-
-        RectTransform buttonRect = mapButton.transform as RectTransform;
-        if (buttonRect != null)
-            buttonRect.sizeDelta = new Vector2(154f, 154f);
 
         Transform existingContent = FindChildRecursive(mapButton.transform, "MiniMapContent");
         if (existingContent != null)
@@ -500,7 +515,7 @@ public class RunHudUI : MonoBehaviour
         BuildPartRow(group.transform, "BodyRow", HudPartIcon.Body, null, 0, null, 5, new Vector2(rowX, -118f), true);
     }
 
-    void BuildPixelDoll(Transform parent)
+void BuildPixelDoll(Transform parent)
     {
         GameObject frame = Rect(parent, "PlayerDollFrame", Anchor.TopLeft, new Vector2(0f, -3f), new Vector2(82f, 116f));
         Image image = frame.AddComponent<Image>();
@@ -582,7 +597,8 @@ public class RunHudUI : MonoBehaviour
         {
             GameObject pip = Rect(parent, prefix + "_Pip_" + i, Anchor.TopLeft, new Vector2(start.x + i * (size.x + gap), start.y), size);
             Image image = pip.AddComponent<Image>();
-            SetRoundedImage(image, roundedPipSprite);
+            SetRoundedImage(image, hpPipSprite != null ? hpPipSprite : roundedPipSprite);
+            image.preserveAspect = hpPipSprite != null;
             image.color = EmptyPipColor;
             image.raycastTarget = false;
             Outline outline = pip.AddComponent<Outline>();
@@ -837,7 +853,7 @@ void BuildTopRightMapButton()
         inventoryButton.onClick.AddListener(ToggleInventory);
         BuildInventoryIcon(inventoryButton.transform);
 
-        menuButton = BuildHudButton(transform, "MenuIconButton", Anchor.BottomRight, new Vector2(-38f, 36f), new Vector2(66f, 66f));
+        menuButton = BuildHudButton(transform, "MenuIconButton", Anchor.BottomRight, new Vector2(-100f, 100f), new Vector2(170f, 170f));
         BuildMenuIcon(menuButton.transform);
         WirePauseMenu();
     }
@@ -853,10 +869,10 @@ void BuildTopRightMapButton()
 
     void BuildMenuIcon(Transform parent)
     {
-        GameObject icon = Rect(parent, "MenuLineIcon", Anchor.Center, Vector2.zero, new Vector2(38f, 34f));
-        AddLine(icon.transform, "MenuA", new Vector2(7f, -8f), new Vector2(24f, 4f), TextColor);
-        AddLine(icon.transform, "MenuB", new Vector2(7f, -16f), new Vector2(24f, 4f), TextColor);
-        AddLine(icon.transform, "MenuC", new Vector2(7f, -24f), new Vector2(24f, 4f), TextColor);
+        GameObject icon = Rect(parent, "MenuLineIcon", Anchor.Center, Vector2.zero, new Vector2(112f, 96f));
+        AddLine(icon.transform, "MenuA", new Vector2(20f, -23f), new Vector2(72f, 11f), TextColor);
+        AddLine(icon.transform, "MenuB", new Vector2(20f, -48f), new Vector2(72f, 11f), TextColor);
+        AddLine(icon.transform, "MenuC", new Vector2(20f, -73f), new Vector2(72f, 11f), TextColor);
     }
 
     Button BuildHudButton(Transform parent, string name, Anchor anchor, Vector2 offset, Vector2 size)

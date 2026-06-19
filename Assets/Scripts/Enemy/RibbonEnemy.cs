@@ -1,13 +1,21 @@
 using System.Collections;
 using UnityEngine;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 [RequireComponent(typeof(Rigidbody2D))]
 public class RibbonEnemy : EnemyBase
 {
+    [Header("Ribbon Sprite")]
+    [SerializeField] Sprite ribbonSprite;
+    [SerializeField] string fallbackSpriteName = "ri1";
     [Header("Ribbon Motion")]
-    [SerializeField, Min(0f)] float idleSwayAngle = 5f;
-    [SerializeField, Min(0f)] float idlePulseAmount = 0.045f;
-    [SerializeField, Min(0.1f)] float idleMotionSpeed = 1.5f;
+    [SerializeField, Min(0.1f)] float walkBoingSpeed = 2.4f;
+    [SerializeField, Min(0f)] float walkStretchAmount = 0.28f;
+    [SerializeField, Min(0f)] float walkSquashAmount = 0.20f;
+    [SerializeField, Min(0f)] float walkReboundAmount = 0.09f;
     [SerializeField, Min(0.05f)] float attackWindupDuration = 0.22f;
     [SerializeField, Min(0.05f)] float fanSwingDuration = 0.28f;
     [SerializeField, Min(0.05f)] float bindThrustDuration = 0.24f;
@@ -25,6 +33,7 @@ public class RibbonEnemy : EnemyBase
     [SerializeField] Color ribbonTelegraphColor = new Color(1f, 0.08f, 0.08f, 0.34f);
 
     Rigidbody2D rb;
+    SpriteRenderer ribbonRenderer;
     Transform player;
     Vector3 baseScale;
     Quaternion baseRotation;
@@ -35,6 +44,9 @@ public class RibbonEnemy : EnemyBase
     protected override void Awake()
     {
         currentHp = maxHp;
+        ribbonRenderer = GetComponent<SpriteRenderer>();
+        LoadRibbonSpriteIfMissing();
+        ApplyRibbonSprite();
         rb = GetComponent<Rigidbody2D>();
         rb.gravityScale = 0f;
         rb.bodyType = RigidbodyType2D.Kinematic;
@@ -98,7 +110,7 @@ public class RibbonEnemy : EnemyBase
             direction = Vector2.right;
 
         yield return StartCoroutine(WindupRoutine(direction, -28f));
-        GameObject telegraph = EnemyTelegraph.CreateFan("RibbonFanTelegraph", origin, direction, fanRadius, fanAngle, ribbonTelegraphColor, 72);
+        GameObject telegraph = TrackTelegraph(EnemyTelegraph.CreateFan("RibbonFanTelegraph", origin, direction, fanRadius, fanAngle, ribbonTelegraphColor, 72));
         yield return new WaitForSeconds(telegraphDuration);
         yield return StartCoroutine(FanSwingRoutine(direction));
 
@@ -107,7 +119,7 @@ public class RibbonEnemy : EnemyBase
             receiver.TryTakePatternDamage(fanDamage);
 
         if (telegraph != null)
-            Destroy(telegraph);
+            DestroyOwnedTelegraph(telegraph);
 
         ResetAttackTimer();
         isAttacking = false;
@@ -126,7 +138,7 @@ public class RibbonEnemy : EnemyBase
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         Vector2 size = new Vector2(bindLength, bindWidth);
         yield return StartCoroutine(WindupRoutine(direction, 18f));
-        GameObject telegraph = EnemyTelegraph.CreateBox("RibbonBindTelegraph", center, size, angle, ribbonTelegraphColor, 72);
+        GameObject telegraph = TrackTelegraph(EnemyTelegraph.CreateBox("RibbonBindTelegraph", center, size, angle, ribbonTelegraphColor, 72));
         yield return EnemyTelegraph.Blink(telegraph, 1, telegraphDuration * 0.5f);
         yield return StartCoroutine(BindThrustRoutine(direction));
 
@@ -138,7 +150,7 @@ public class RibbonEnemy : EnemyBase
         }
 
         if (telegraph != null)
-            Destroy(telegraph);
+            DestroyOwnedTelegraph(telegraph);
 
         ResetAttackTimer();
         isAttacking = false;
@@ -151,12 +163,48 @@ public class RibbonEnemy : EnemyBase
             return;
 
         motionTime += Time.deltaTime;
-        float wave = Mathf.Sin(motionTime * Mathf.PI * 2f * idleMotionSpeed);
-        transform.localRotation = baseRotation * Quaternion.Euler(0f, 0f, wave * idleSwayAngle);
-        transform.localScale = new Vector3(
-            baseScale.x * (1f + Mathf.Abs(wave) * idlePulseAmount),
-            baseScale.y * (1f - Mathf.Abs(wave) * idlePulseAmount * 0.5f),
-            baseScale.z);
+        float phase = Mathf.Repeat(motionTime * walkBoingSpeed, 1f);
+        Vector2 scale = RibbonWalkScale(phase);
+        transform.localRotation = baseRotation;
+        transform.localScale = new Vector3(baseScale.x * scale.x, baseScale.y * scale.y, baseScale.z);
+    }
+
+    Vector2 RibbonWalkScale(float phase)
+    {
+        if (phase < 0.32f)
+        {
+            float t = Mathf.Sin((phase / 0.32f) * Mathf.PI);
+            return new Vector2(1f - walkStretchAmount * 0.45f * t, 1f + walkStretchAmount * t);
+        }
+
+        if (phase < 0.62f)
+        {
+            float t = Mathf.Sin(((phase - 0.32f) / 0.30f) * Mathf.PI);
+            return new Vector2(1f + walkSquashAmount * 1.05f * t, 1f - walkSquashAmount * t);
+        }
+
+        float rebound = Mathf.Sin(((phase - 0.62f) / 0.38f) * Mathf.PI);
+        return new Vector2(1f - walkReboundAmount * 0.35f * rebound, 1f + walkReboundAmount * rebound);
+    }
+
+    void ApplyRibbonSprite()
+    {
+        if (ribbonRenderer != null && ribbonSprite != null)
+            ribbonRenderer.sprite = ribbonSprite;
+    }
+
+    void LoadRibbonSpriteIfMissing()
+    {
+        if (ribbonSprite == null && ribbonRenderer != null && ribbonRenderer.sprite != null && ribbonRenderer.sprite.name == fallbackSpriteName)
+            ribbonSprite = ribbonRenderer.sprite;
+
+        if (ribbonSprite == null)
+            ribbonSprite = Resources.Load<Sprite>("Sprites/enemy/" + fallbackSpriteName);
+
+#if UNITY_EDITOR
+        if (ribbonSprite == null)
+            ribbonSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/enemy/" + fallbackSpriteName + ".png");
+#endif
     }
 
     IEnumerator WindupRoutine(Vector2 direction, float offsetAngle)

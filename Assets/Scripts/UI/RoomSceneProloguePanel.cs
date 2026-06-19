@@ -8,6 +8,7 @@ using UnityEngine.InputSystem;
 
 public sealed class RoomSceneProloguePanel : MonoBehaviour
 {
+    const bool ShowRoomSceneInputHints = false;
     const string RoomSceneName = "RoomScene";
     const string ObjectName = "RoomSceneProloguePanel";
     const string LegacyObjectName = "_RoomSceneProloguePanel";
@@ -21,6 +22,9 @@ public sealed class RoomSceneProloguePanel : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void RegisterSceneHook()
     {
+        if (!ShowRoomSceneInputHints)
+            return;
+
         SceneManager.sceneLoaded -= HandleSceneLoaded;
         SceneManager.sceneLoaded += HandleSceneLoaded;
         TryCreate(SceneManager.GetActiveScene());
@@ -33,6 +37,9 @@ public sealed class RoomSceneProloguePanel : MonoBehaviour
 
     static void TryCreate(Scene scene)
     {
+        if (!ShowRoomSceneInputHints)
+            return;
+
         if (!scene.IsValid() || scene.name != RoomSceneName)
             return;
 

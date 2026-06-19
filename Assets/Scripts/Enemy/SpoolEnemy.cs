@@ -102,15 +102,15 @@ public class SpoolEnemy : EnemyBase
             float angle = (angleOffset + 360f * i / strandCount) * Mathf.Deg2Rad;
             Vector2 direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
             Vector2 end = origin + direction * strandLength;
-            GameObject visual = EnemyTelegraph.CreateLine("SpoolThreadWarning", origin, end, strandWidth, warningColor, 69);
+            GameObject visual = TrackTelegraph(EnemyTelegraph.CreateLine("SpoolThreadWarning", origin, end, strandWidth, warningColor, 69));
             plannedStrands.Add(new Strand { start = origin, end = end, visual = visual });
         }
 
-        GameObject warningRoot = StrandRoot(plannedStrands);
+        GameObject warningRoot = TrackTelegraph(StrandRoot(plannedStrands));
         yield return EnemyTelegraph.Blink(warningRoot, 2, threadWarningDuration * 0.25f);
         ClearStrands(plannedStrands);
         if (warningRoot != null)
-            Destroy(warningRoot);
+            DestroyOwnedTelegraph(warningRoot);
 
         activeStrands.Clear();
         for (int i = 0; i < plannedStrands.Count; i++)
@@ -196,11 +196,11 @@ public class SpoolEnemy : EnemyBase
         {
             Strand active = activeStrands[i];
             if (active.visual != null)
-                Destroy(active.visual);
+                DestroyOwnedTelegraph(active.visual);
 
             Vector2 end = Vector2.Lerp(plannedStrands[i].start, plannedStrands[i].end, t);
             active.end = end;
-            active.visual = EnemyTelegraph.CreateLine("SpoolThread", active.start, active.end, strandWidth, strandColor, 69);
+            active.visual = TrackTelegraph(EnemyTelegraph.CreateLine("SpoolThread", active.start, active.end, strandWidth, strandColor, 69));
             activeStrands[i] = active;
         }
     }
@@ -247,7 +247,7 @@ public class SpoolEnemy : EnemyBase
     {
         for (int i = 0; i < strands.Count; i++)
             if (strands[i].visual != null)
-                Destroy(strands[i].visual);
+                DestroyOwnedTelegraph(strands[i].visual);
     }
 
     void ResetThreadTimer()

@@ -41,20 +41,18 @@ public class RunPauseMenuUI : MonoBehaviour
     static readonly Color TextColor = new Color(0.17f, 0.11f, 0.06f, 1f);
     static readonly Color ButtonHover = new Color(0.64f, 0.45f, 0.28f, 1f);
     static readonly Color ButtonPressed = new Color(0.48f, 0.31f, 0.18f, 1f);
-    static readonly Vector2 MenuPanelSize = new Vector2(560f, 250f);
+    static readonly Vector2 MenuPanelSize = new Vector2(720f, 360f);
     static readonly Vector2 PanelSpriteSize = new Vector2(400f, 250f);
 
     void Awake()
     {
         EnsureAssets();
         Build();
+        SetMenuButton(menuButton);
     }
 
     public void SetMenuButton(Button button)
     {
-        if (menuButton == button)
-            return;
-
         if (menuButton != null)
             menuButton.onClick.RemoveListener(OnMenuButtonClicked);
 
@@ -99,20 +97,6 @@ void Build()
             BuildMenuPanel();
         else
             ConfigureMenuPanel();
-        if (settingsPanel == null)
-            BuildSettingsPanel();
-        else
-            ConfigureSettingsPanel();
-        if (savePanel == null)
-            BuildSavePanel();
-        else
-            ConfigureSavePanel();
-        if (confirmPanel == null)
-            BuildConfirmPanel();
-        else
-            ConfigureConfirmPanel();
-        if (fadeImage == null)
-            BuildFadeImage();
 
         HidePanels();
     }
@@ -152,8 +136,6 @@ void BuildMenuPanel()
         if (menuPanel == null)
             return;
 
-        DestroyDirectChildrenWithPrefix(menuPanel.transform, "RunMenuButton_");
-
         string[] labels =
         {
             "\uC124\uC815",
@@ -171,7 +153,7 @@ void BuildMenuPanel()
 
         for (int i = 0; i < labels.Length; i++)
         {
-            Button button = CreateSpriteButton(menuPanel.transform, "RunMenuButton_" + i, new Vector2(0f, 75f - i * 50f), new Vector2(440f, 44f), labels[i], 34f);
+            Button button = GetOrCreateSpriteButton(menuPanel.transform, "RunMenuButton_" + i, new Vector2(0f, 114f - i * 76f), new Vector2(560f, 68f), labels[i], 42f);
             button.onClick.AddListener(actions[i]);
         }
     }
@@ -547,6 +529,9 @@ void BuildMenuPanel()
 
     IEnumerator ReturnToStartScene()
     {
+        if (fadeImage == null)
+            BuildFadeImage();
+
         if (fadeImage != null)
         {
             fadeImage.gameObject.SetActive(true);
@@ -643,6 +628,64 @@ void BuildMenuPanel()
         button.onClick.AddListener(PlayClickSound);
         CreateLabel(image.transform, "Label", label, Vector2.zero, size, fontSize);
         return button;
+    }
+
+    Button GetOrCreateSpriteButton(Transform parent, string name, Vector2 position, Vector2 size, string label, float fontSize)
+    {
+        Transform existing = parent.Find(name);
+        if (existing == null)
+            return CreateSpriteButton(parent, name, position, size, label, fontSize);
+
+        RectTransform rect = existing as RectTransform;
+        if (rect == null)
+            rect = existing.gameObject.AddComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+
+        Image image = existing.GetComponent<Image>();
+        if (image == null)
+            image = existing.gameObject.AddComponent<Image>();
+
+        image.sprite = questionSprite;
+        image.type = questionSprite != null && questionSprite.border != Vector4.zero ? Image.Type.Sliced : Image.Type.Simple;
+        image.color = Color.white;
+        image.raycastTarget = true;
+
+        Button button = existing.GetComponent<Button>();
+        if (button == null)
+            button = existing.gameObject.AddComponent<Button>();
+
+        button.targetGraphic = image;
+        button.onClick.RemoveAllListeners();
+        ApplyVisibleButtonTint(button);
+        button.onClick.AddListener(PlayClickSound);
+        EnsureButtonLabel(existing, label, fontSize);
+        return button;
+    }
+
+    TextMeshProUGUI EnsureButtonLabel(Transform parent, string text, float fontSize)
+    {
+        Transform existing = parent.Find("Label");
+        TextMeshProUGUI label = existing != null ? existing.GetComponent<TextMeshProUGUI>() : null;
+        if (label == null)
+        {
+            GameObject go = new GameObject("Label");
+            go.transform.SetParent(parent, false);
+            RectTransform rect = go.AddComponent<RectTransform>();
+            StretchToParent(rect);
+            label = go.AddComponent<TextMeshProUGUI>();
+        }
+
+        label.font = UIThinDungFont.Get(uiFont);
+        label.text = text;
+        label.fontSize = fontSize;
+        label.alignment = TextAlignmentOptions.Center;
+        label.color = TextColor;
+        label.raycastTarget = false;
+        label.textWrappingMode = TextWrappingModes.NoWrap;
+        return label;
     }
 
     void PlayClickSound()

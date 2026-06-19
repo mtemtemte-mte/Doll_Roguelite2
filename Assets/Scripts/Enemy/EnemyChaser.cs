@@ -84,7 +84,7 @@ public class EnemyChaser : EnemyBase
         Vector2 targetPosition = player != null ? (Vector2)player.position : rb.position;
         float impactRadius = EffectiveSlamRadius();
 
-        GameObject telegraph = EnemyTelegraph.CreateCircle("ButtonSlamTelegraph", targetPosition, impactRadius, slamTelegraphColor, 70);
+        GameObject telegraph = TrackTelegraph(EnemyTelegraph.CreateCircle("ButtonSlamTelegraph", targetPosition, impactRadius, slamTelegraphColor, 70));
         yield return EnemyTelegraph.Blink(telegraph, 2, slamTelegraphDuration * 0.25f);
 
         float elapsed = 0f;
@@ -113,7 +113,7 @@ public class EnemyChaser : EnemyBase
 
         transform.localScale = baseScale;
         if (telegraph != null)
-            Destroy(telegraph);
+            DestroyOwnedTelegraph(telegraph);
 
         ResetSlamTimer();
         isSlamming = false;

@@ -29,6 +29,7 @@ public class EnemyBase : MonoBehaviour
     int currentFrame = -1;
     Coroutine hitFeedbackRoutine;
     Color spriteBaseColor = Color.white;
+    readonly List<GameObject> ownedTelegraphs = new List<GameObject>();
 
     protected virtual void Awake()
     {
@@ -332,6 +333,37 @@ public class EnemyBase : MonoBehaviour
         spriteBaseColor = spriteRenderer.color;
 
         hitFeedbackRoutine = StartCoroutine(HitFeedbackRoutine());
+    }
+
+    protected GameObject TrackTelegraph(GameObject telegraph)
+    {
+        if (telegraph != null && !ownedTelegraphs.Contains(telegraph))
+            ownedTelegraphs.Add(telegraph);
+
+        return telegraph;
+    }
+
+    protected void DestroyOwnedTelegraph(GameObject telegraph)
+    {
+        if (telegraph == null)
+            return;
+
+        ownedTelegraphs.Remove(telegraph);
+        Destroy(telegraph);
+    }
+
+    protected void ClearOwnedTelegraphs()
+    {
+        for (int i = ownedTelegraphs.Count - 1; i >= 0; i--)
+            if (ownedTelegraphs[i] != null)
+                Destroy(ownedTelegraphs[i]);
+
+        ownedTelegraphs.Clear();
+    }
+
+    protected virtual void OnDestroy()
+    {
+        ClearOwnedTelegraphs();
     }
 
     IEnumerator HitFeedbackRoutine()
