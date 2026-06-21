@@ -285,7 +285,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 0}
+    m_TransformParent: {fileID: 2064320645}
     m_Modifications:
     - target: {fileID: 708916344383475794, guid: 1126bc8203ab48941ab16d832b3ef907, type: 3}
       propertyPath: m_Name
@@ -388,6 +388,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1126bc8203ab48941ab16d832b3ef907, type: 3}
+--- !u!224 &370959586 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 6394819164242001409, guid: 1126bc8203ab48941ab16d832b3ef907, type: 3}
+  m_PrefabInstance: {fileID: 370959585}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &562013458
 GameObject:
   m_ObjectHideFlags: 0
@@ -792,6 +797,7 @@ MonoBehaviour:
   enemyEntranceStart: {x: -12, y: -0.6}
   enemyEntranceEnd: {x: -3.1, y: -0.6}
   doorPosition: {x: 0, y: 1.1}
+  cameraBoundsPadding: {x: 0.55, y: 0.78}
 --- !u!4 &1606162494
 Transform:
   m_ObjectHideFlags: 0
@@ -945,6 +951,9 @@ MonoBehaviour:
   hitShakeDistance: 0.055
   hitScaleMultiplier: 1.08
   hitTint: {r: 1, g: 0.42, b: 0.38, a: 1}
+  shakeCameraOnHit: 1
+  cameraShakeDuration: 0.12
+  cameraShakeMagnitude: 0.11
   dropDownDistance: 0.52
   dropSideDistance: 0.16
   droppedPartSortingOrder: 4
@@ -1344,6 +1353,7 @@ Transform:
   - {fileID: 660535628}
   - {fileID: 1480906532}
   - {fileID: 1376827949}
+  - {fileID: 370959586}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
@@ -1354,5 +1364,4 @@ SceneRoots:
   - {fileID: 136972351}
   - {fileID: 1606162494}
   - {fileID: 259531827}
-  - {fileID: 370959585}
   - {fileID: 2064320645}

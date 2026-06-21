@@ -94,7 +94,8 @@ public class RunHudUI : MonoBehaviour
             }
 
             instance = this;
-            DontDestroyOnLoad(gameObject);
+            // HUD는 이제 Player 프리팹의 자식으로, 각 씬의 Player와 함께 생성/파괴됨.
+            // (DontDestroyOnLoad 제거 — Player가 씬마다 자기 HUD를 가져옴)
         }
 
         EnsureEventSystem();
@@ -108,6 +109,12 @@ public class RunHudUI : MonoBehaviour
         InventoryUI inventoryUI = GetComponentInChildren<InventoryUI>(true);
         if (inventoryUI != null && !inventoryUI.gameObject.activeSelf)
             inventoryUI.gameObject.SetActive(true);
+    }
+
+    void OnDestroy()
+    {
+        if (instance == this)
+            instance = null;
     }
 
     void Update()

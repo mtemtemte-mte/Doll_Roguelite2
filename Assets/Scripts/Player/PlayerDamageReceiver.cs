@@ -11,8 +11,8 @@ public class PlayerDamageReceiver : MonoBehaviour
     [SerializeField] LayerMask enemyLayers = ~0;
 
     [Header("Body HP")]
-    [SerializeField, Min(1)] int bodyMaxHp = 100;
-    [SerializeField, Min(0)] int bodyCurrentHp = 100;
+    [SerializeField, Min(1)] int bodyMaxHp = 3;
+    [SerializeField, Min(0)] int bodyCurrentHp = 3;
 
     [Header("Hit Feedback")]
     [SerializeField, Range(0.05f, 0.45f)] float hitFeedbackDuration = 0.16f;
@@ -42,6 +42,7 @@ public class PlayerDamageReceiver : MonoBehaviour
 
     readonly Dictionary<SpriteRenderer, Color> rendererColors = new Dictionary<SpriteRenderer, Color>();
     readonly List<BodySlot> damageCandidates = new List<BodySlot>();
+    int fallenPartsCount;
 
     PlayerController playerController;
     SpriteRenderer bodyRenderer;
@@ -131,20 +132,51 @@ public class PlayerDamageReceiver : MonoBehaviour
     void DamageNextBodyTarget(int damage)
     {
         InventoryManager inventory = InventoryManager.Instance;
+        damageCandidates.Clear();
+
         if (inventory != null)
         {
-            BodySlot slot;
-            if (TryPickRandomDamageSlot(inventory, out slot))
+            for (int i = 0; i < DamageSlots.Length; i++)
             {
-                Sprite dropSprite = SpriteForSlot(slot);
-                SpriteRenderer sourceRenderer = SourceRendererForSlot(slot);
-                BodyPart brokenPart;
-                if (inventory.TryDamageEquippedPart(slot, damage, out brokenPart) && brokenPart != null)
-                    DropPart(dropSprite, sourceRenderer);
-                return;
+                BodySlot candidate = DamageSlots[i];
+                if (inventory.GetEquippedPart(candidate) != null)
+                    damageCandidates.Add(candidate);
             }
         }
 
+        bool bodyInPool = fallenPartsCount >= 3;
+        int totalCount = damageCandidates.Count + (bodyInPool ? 1 : 0);
+
+        if (totalCount == 0)
+        {
+            DamageBody(damage);
+            return;
+        }
+
+        int pick = Random.Range(0, totalCount);
+
+        if (pick < damageCandidates.Count)
+        {
+            BodySlot slot = damageCandidates[pick];
+            Sprite dropSprite = SpriteForSlot(slot);
+            SpriteRenderer sourceRenderer = SourceRendererForSlot(slot);
+            BodyPart brokenPart;
+            if (inventory.TryDamageEquippedPart(slot, damage, out brokenPart) && brokenPart != null)
+            {
+                fallenPartsCount++;
+                DropPart(dropSprite, sourceRenderer);
+                if (slot == BodySlot.EyeLeft || slot == BodySlot.EyeRight)
+                    EyePixelationController.Instance?.OnEyeFallen(slot);
+            }
+        }
+        else
+        {
+            DamageBody(damage);
+        }
+    }
+
+    void DamageBody(int damage)
+    {
         bodyCurrentHp = Mathf.Clamp(bodyCurrentHp - damage, 0, bodyMaxHp);
         PlayerManager.Instance?.TakeDamage(damage);
         if (bodyCurrentHp <= 0 && !bodyDropped)
@@ -152,25 +184,6 @@ public class PlayerDamageReceiver : MonoBehaviour
             bodyDropped = true;
             DropPart(bodyRenderer != null ? bodyRenderer.sprite : null, bodyRenderer);
         }
-    }
-
-    bool TryPickRandomDamageSlot(InventoryManager inventory, out BodySlot slot)
-    {
-        slot = BodySlot.ArmLeft;
-        damageCandidates.Clear();
-
-        for (int i = 0; i < DamageSlots.Length; i++)
-        {
-            BodySlot candidate = DamageSlots[i];
-            if (inventory.GetEquippedPart(candidate) != null)
-                damageCandidates.Add(candidate);
-        }
-
-        if (damageCandidates.Count == 0)
-            return false;
-
-        slot = damageCandidates[Random.Range(0, damageCandidates.Count)];
-        return true;
     }
 
     void ShakeCamera()

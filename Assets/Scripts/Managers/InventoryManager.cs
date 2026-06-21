@@ -17,8 +17,8 @@ public class InventoryManager : MonoBehaviour
 
     // indexed by (int)BodySlot — null means not equipped
     public BodyPart[] equipped  = new BodyPart[6];
-    // 2 storage slots — null means empty
-    public BodyPart[] storage   = new BodyPart[2];
+    // 3x3 = 9 storage slots — null means empty
+    public BodyPart[] storage   = new BodyPart[9];
 
     public event Action OnInventoryChanged;
 
@@ -97,6 +97,7 @@ public class InventoryManager : MonoBehaviour
 
         var part = storage[storageIdx];
         if (part == null) return false;
+        if (!part.IsEquippable) return false; // 동전/누더기/보석은 장착 불가
 
         int idx = (int)part.slot;
         var displaced = equipped[idx];
@@ -109,13 +110,20 @@ public class InventoryManager : MonoBehaviour
         return true;
     }
 
+    // 동전/누더기/보석 같은 소모성 아이템을 보관함 빈칸에 추가. 보관함이 가득 차면 false.
+    public bool AddItem(ItemKind kind)
+    {
+        return TryAddPart(new BodyPart(kind), false);
+    }
+
     public bool TryAddPart(BodyPart part, bool equipIfEmpty = true)
     {
         if (part == null)
             return false;
 
         int equippedIndex = (int)part.slot;
-        if (equipIfEmpty && equippedIndex >= 0 && equippedIndex < equipped.Length && equipped[equippedIndex] == null)
+        // 장착 가능한 부위만 빈 슬롯에 자동 장착. 소모성 아이템은 항상 보관함으로.
+        if (equipIfEmpty && part.IsEquippable && equippedIndex >= 0 && equippedIndex < equipped.Length && equipped[equippedIndex] == null)
         {
             equipped[equippedIndex] = part;
             SyncBodyState();
@@ -217,7 +225,7 @@ public class InventoryManager : MonoBehaviour
     public void ReplaceState(BodyPart[] newEquipped, BodyPart[] newStorage)
     {
         equipped = NormalizeParts(newEquipped, 6);
-        storage = NormalizeParts(newStorage, 2);
+        storage = NormalizeParts(newStorage, 9);
         SyncBodyState();
         OnInventoryChanged?.Invoke();
     }
